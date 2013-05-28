@@ -12,6 +12,7 @@ from collections import OrderedDict
 class ModelQueryForm(Form):
     model = None
     exclude = None
+    recursion_depth = 0
     
     RANGE_TYPES = (
                      models.BigIntegerField,
@@ -21,31 +22,45 @@ class ModelQueryForm(Form):
                      models.PositiveIntegerField,
                      models.PositiveSmallIntegerField,
                      models.SmallIntegerField
-                   )
+    )
     
     def __init__(self, *args, **kwargs):
         super(ModelQueryForm, self).__init__(*args, **kwargs)
-        try:
-            self.model_fields = self.model._meta.fields
-        except:
+        if not self.model:
             raise ImproperlyConfigured("ModelQueryForm needs a model to work with")
         
-        for field in self.model_fields:
-            if field.name in self.exclude:
+        self._build_form_from_fields(self.model)
+        
+    
+    def _build_form_from_fields(self, model, field_prepend = None, recursion_level = 0):
+        RECURE_MODELS = (
+             models.ForeignKey,
+             models.OneToOneField,
+        )
+        for field in model._meta.fields + model._meta.many_to_many:
+            form_name = field.name
+            if field_prepend:
+                form_name = "%s__%s" %(field_prepend, field.name)
+            if form_name in self.exclude or isinstance(field, models.AutoField):
                 continue
-            if isinstance(field, self.RANGE_TYPES) and field.choices == []: 
-                self.fields[field.name] = RangeField(label = field.verbose_name, required = False, model = self.model, field = field.name)
+            if isinstance(field, RECURE_MODELS) and self.recursion_depth > 0 and self.recursion_depth > recursion_level:
+                self._build_form_from_fields(field.rel.to, form_name, recursion_level + 1)
+            elif isinstance(field, self.RANGE_TYPES) and field.choices == []: 
+                self.fields[form_name] = RangeField(label = field.verbose_name, required = False, model = self.model, field = form_name)
             else:
                 if field.choices == []:
-                    choices = [(x, x) 
-                                for x in 
-                                  self.model.objects.distinct()
-                                                    .order_by(field.name)
-                                                    .values_list(field.name, flat=True)
-                              ]
+                    if isinstance(field, RECURE_MODELS) or isinstance(field, models.ManyToManyField):
+                        choices = [[fkf.pk, fkf] for fkf in sorted(field.rel.to.objects.distinct())]
+                    else:
+                        choices = [[x, x] 
+                                    for x in 
+                                      model.objects.distinct()
+                                                   .order_by(field.name)
+                                                   .values_list(field.name, flat=True)
+                                  ]
                 else:
                     choices = field.choices
-                self.fields[field.name] = MultipleChoiceField(label = field.verbose_name, required = False, widget = CheckboxSelectMultiple, choices = choices)
+                self.fields[form_name] = MultipleChoiceField(label = field.verbose_name, required = False, widget = CheckboxSelectMultiple, choices = choices)
     
     def clean(self):
         cleaned_data = super(ModelQueryForm, self).clean()
@@ -60,7 +75,7 @@ class ModelQueryForm(Form):
             data_set.exists()
         except:
             raise ImproperlyConfigured("Model query requires a QuerySet to filter against")
-        
+    
         for field in self.changed_data:
             values = self.cleaned_data[field]
             query_list = []
@@ -85,7 +100,7 @@ class ModelQueryForm(Form):
             
         return data_set
     
-    def get_vals_for_pretty_print(self):
+    def pretty_print_query(self):
         vals = OrderedDict()
         for field in self.fields:
             try:
