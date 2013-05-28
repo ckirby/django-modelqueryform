@@ -1,0 +1,4 @@
+include LICENSE
+recursive-include modelqueryform/templatetags *
+recursive-include modelqueryform/tests *
+recursive-include docs *
