@@ -33,7 +33,7 @@ class ModelQueryForm(Form):
         
     
     def _build_form_from_fields(self, model, field_prepend = None, recursion_level = 0):
-        RECURE_MODELS = (
+        RECURSE_MODELS = (
              models.ForeignKey,
              models.OneToOneField,
         )
@@ -43,13 +43,15 @@ class ModelQueryForm(Form):
                 form_name = "%s__%s" %(field_prepend, field.name)
             if form_name in self.exclude or isinstance(field, models.AutoField):
                 continue
-            if isinstance(field, RECURE_MODELS) and self.recursion_depth > 0 and self.recursion_depth > recursion_level:
+            if isinstance(field, RECURSE_MODELS) and self.recursion_depth > 0 and self.recursion_depth > recursion_level:
                 self._build_form_from_fields(field.rel.to, form_name, recursion_level + 1)
             elif isinstance(field, self.RANGE_TYPES) and field.choices == []: 
                 self.fields[form_name] = RangeField(label = field.verbose_name, required = False, model = self.model, field = form_name)
             else:
-                if field.choices == []:
-                    if isinstance(field, RECURE_MODELS) or isinstance(field, models.ManyToManyField):
+                if isinstance(field, models.BooleanField):
+                    choices = [[True,'Yes'],[False, 'No']]
+                elif field.choices == []:
+                    if isinstance(field, RECURSE_MODELS) or isinstance(field, models.ManyToManyField):
                         choices = [[fkf.pk, fkf] for fkf in sorted(field.rel.to.objects.distinct())]
                     else:
                         choices = [[x, x] 
