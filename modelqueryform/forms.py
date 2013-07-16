@@ -11,7 +11,7 @@ from collections import OrderedDict
 
 class ModelQueryForm(Form):
     model = None
-    exclude = None
+    exclude = []
     recursion_depth = 0
     
     RANGE_TYPES = (

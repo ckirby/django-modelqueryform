@@ -8,8 +8,8 @@ os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
 
 setup(
     name = 'django-modelqueryform',
-    version = '0.1',
-    description = 'Make a form to query against a model"',
+    version = '0.2',
+    description = 'Make a form to query against a model',
     long_description = README,
     
     author = 'Chaim Kirby',

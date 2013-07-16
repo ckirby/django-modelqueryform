@@ -8,7 +8,8 @@ Provides a Form class for subclassing which provides a form for generating queri
     $ pip install django-modelqueryform
     
 This will give you a Form class ModelQueryForm that must be subclassed
-ModelQUeryForm has the attributes:
+
+ModelQueryForm has the attributes:
 
     * model (Required)
         * **Required** The model class to query 
@@ -70,7 +71,10 @@ views.py
                 if form.changed_data:
                     matched_query = form.process_model_query()
                     generated_query_dict = form.pretty_print_query
-                return render_to_response('test_model_query_match.html', {'matches' : matched_query, 'query' : generated_query_dict
+                return render_to_response('test_model_query_match.html', 
+                                          {'matches' : matched_query, 'query' : generated_query_dict}, 
+                                          context_instance = RequestContext(request)
+                )
             
         else:
             form = TestModelQueryForm()
