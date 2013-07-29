@@ -104,24 +104,24 @@ class ModelQueryForm(Form):
     
     def pretty_print_query(self):
         vals = OrderedDict()
-        for field in self.fields:
+        for field in self.changed_data:
             try:
-                if self.initial[field]:
+                if self.fields[field]:
                     try:
                         choices = self.fields[field].choices
-                        for selected in self.initial[field]:
+                        for selected in self.cleaned_data[field]:
                             try:
                                 vals[self.fields[field].label]
                                 vals[self.fields[field].label] = "%s; %s" % (vals[self.fields[field].label],dict(choices)[int(selected)])
                             except:
                                 vals[self.fields[field].label] = "%s" % dict(choices)[int(selected)]                                
                     except:
-                        vals[self.fields[field].label] = "%s - %s" %(self.initial[field][0], self.initial[field][1])
-                        if len(self.initial[field]) == 3:
+                        vals[self.fields[field].label] = "%s - %s" %(self.cleaned_data[field][0], self.cleaned_data[field][1])
+                        if len(self.cleaned_data[field]) == 3:
                             vals[self.fields[field].label] = "%s. %s" %(vals[self.fields[field].label], "Includes Empty Values")
-            except:
-                pass
-            
+
+            except Exception, e:
+                print e
         return vals
     
 class RangeWidget(MultiWidget):
