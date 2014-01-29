@@ -50,6 +50,8 @@ class ModelQueryForm(Form):
             else:
                 if isinstance(field, models.BooleanField):
                     choices = [[True,'Yes'],[False, 'No']]
+                elif isinstance(field, models.NullBooleanField):
+                    choices = [[True,'Yes'],[False, 'No'], [None,'Unknown']]
                 elif field.choices == []:
                     if isinstance(field, RECURSE_MODELS) or isinstance(field, models.ManyToManyField):
                         choices = [[fkf.pk, fkf] for fkf in sorted(field.rel.to.objects.distinct())]
