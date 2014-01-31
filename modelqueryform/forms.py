@@ -80,6 +80,7 @@ class ModelQueryForm(Form):
         except:
             raise ImproperlyConfigured("Model query requires a QuerySet to filter against")
     
+        full_query = []
         for field in self.changed_data:
             values = self.cleaned_data[field]
             query_list = []
@@ -99,8 +100,8 @@ class ModelQueryForm(Form):
                     range_list.append(Q(**{field + '__lte': range_max}))
                     
                     query_list.append(reduce(operator.and_, range_list))
-            
-            data_set = data_set.filter(reduce(operator.or_, query_list))
+            full_query.append(reduce(operator.or_, query_list))
+        data_set = data_set.filter(reduce(operator.and_, full_query))
             
         return data_set
     
