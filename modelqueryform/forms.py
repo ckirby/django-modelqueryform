@@ -83,25 +83,27 @@ class ModelQueryForm(Form):
         full_query = []
         for field in self.changed_data:
             values = self.cleaned_data[field]
-            query_list = []
-            if not isinstance(values, dict):
-                for value in values:
-                    query_list.append(Q(**{field: value}))
-            else:
-                if values['allow_empty']:
-                    query_list.append(Q(**{field: None}))
-                range_min = values['min']
-                range_max = values['max']
-                if range_min == range_max:
-                    query_list.append(Q(**{field: range_min}))
+            if values:
+                query_list = []
+                if not isinstance(values, dict):
+                    for value in values:
+                        query_list.append(Q(**{field: value}))
                 else:
-                    range_list = []
-                    range_list.append(Q(**{field + '__gte': range_min}))
-                    range_list.append(Q(**{field + '__lte': range_max}))
-                    
-                    query_list.append(reduce(operator.and_, range_list))
-            full_query.append(reduce(operator.or_, query_list))
-        data_set = data_set.filter(reduce(operator.and_, full_query))
+                    if values['allow_empty']:
+                        query_list.append(Q(**{field: None}))
+                    range_min = values['min']
+                    range_max = values['max']
+                    if range_min == range_max:
+                        query_list.append(Q(**{field: range_min}))
+                    else:
+                        range_list = []
+                        range_list.append(Q(**{field + '__gte': range_min}))
+                        range_list.append(Q(**{field + '__lte': range_max}))
+                        
+                        query_list.append(reduce(operator.and_, range_list))
+                full_query.append(reduce(operator.or_, query_list))
+        if full_query:
+            data_set = data_set.filter(reduce(operator.and_, full_query))
             
         return data_set
     
