@@ -72,7 +72,7 @@ class ModelQueryForm(Form):
         return cleaned_data
     
     def process_model_query(self, data_set = None):
-        if not data_set:
+        if data_set is None:
             data_set = self.model.objects.all()
         
         try:
