@@ -11,75 +11,188 @@ from collections import OrderedDict
 
 class ModelQueryForm(Form):
     model = None
-    exclude = []
-    recursion_depth = 0
-    
-    RANGE_TYPES = (
-                     models.BigIntegerField,
-                     models.DecimalField,
-                     models.FloatField,
-                     models.IntegerField,
-                     models.PositiveIntegerField,
-                     models.PositiveSmallIntegerField,
-                     models.SmallIntegerField
-    )
-    
+    fields = []
+    traverse_fields = []
+
     def __init__(self, *args, **kwargs):
         super(ModelQueryForm, self).__init__(*args, **kwargs)
         if not self.model:
             raise ImproperlyConfigured("ModelQueryForm needs a model to work with")
-        
-        self._build_form_from_fields(self.model)
-        
-    
-    def _build_form_from_fields(self, model, field_prepend = None, recursion_level = 0):
-        RECURSE_MODELS = (
-             models.ForeignKey,
-             models.OneToOneField,
-        )
+
+        self._build_form(self.model)
+
+    def _build_form(self, model, field_prepend=None):
         for field in model._meta.fields + model._meta.many_to_many:
-            form_name = field.name
+            orm_name = field.name
             if field_prepend:
-                form_name = "%s__%s" %(field_prepend, field.name)
-            if form_name in self.exclude or isinstance(field, models.AutoField):
+                orm_name = "%s__%s" % (field_prepend, orm_name)
+            if not orm_name in self.fields:
                 continue
-            if isinstance(field, RECURSE_MODELS) and self.recursion_depth > 0 and self.recursion_depth > recursion_level:
-                self._build_form_from_fields(field.rel.to, form_name, recursion_level + 1)
-            elif isinstance(field, self.RANGE_TYPES) and field.choices == []: 
-                self.fields[form_name] = RangeField(label = field.verbose_name, required = False, model = self.model, field = form_name)
-            else:
-                if isinstance(field, models.BooleanField):
-                    choices = [[True,'Yes'],[False, 'No']]
-                elif isinstance(field, models.NullBooleanField):
-                    choices = [[True,'Yes'],[False, 'No'], [None,'Unknown']]
-                elif field.choices == []:
-                    if isinstance(field, RECURSE_MODELS) or isinstance(field, models.ManyToManyField):
-                        choices = [[fkf.pk, fkf] for fkf in sorted(field.rel.to.objects.distinct())]
-                    else:
-                        choices = [[x, x] 
-                                    for x in 
-                                      model.objects.distinct()
-                                                   .order_by(field.name)
-                                                   .values_list(field.name, flat=True)
-                                  ]
+            if orm_name in self.traverse_fields:
+                if self.is_rel_field(field):
+                    self._build_form(field.rel.to, orm_name)
                 else:
-                    choices = field.choices
-                self.fields[form_name] = MultipleChoiceField(label = field.verbose_name, required = False, widget = CheckboxSelectMultiple, choices = choices)
-    
+                    raise TypeError("%s cannot be used for traversal."
+                                    "Traversal fields must be one of type ForeignKey, OneToOneField, ManyToManyField"
+                                    % orm_name
+                    )
+            self.fields[field.name] = self._build_form_field(field, orm_name)
+
+    def _build_form_field(self, field, name):
+        '''
+        Builds a Form Field type given a model field.
+        First attempt is method build_{field.name}
+        Second attempt is method build_type_{field.get_internal_type()}
+        Otherwise defaults to defined field.choices if available
+        '''
+        if hasattr(self, "build_%s" % name.lower):
+            return getattr(self, "build_%s" % name.lower)(field, name)
+        if hasattr(self, "build_type_%s" % field.get_internal_type().lower):
+            return getattr(self, "build_type_%s" % field.get_internal_type().lower)(field, name)
+        if not field.choices == []:
+            return self.get_multiplechoice_field(field)
+
+        raise NotImplementedError(
+                    "Field %s doesn't have default field.choices and "
+                    "ModelQueryForm doesn't have a default field builder for type %s."
+                    "Please define either a method build_type_%s(self, field) for fields of this type or"
+                    "build_%s(self, field) for this field specifically"
+                    % (field.name.lower(),
+                       field.get_internal_type().lower(),
+                       field.get_internal_type().lower(),
+                       field.name.lower())
+        )
+
+    def is_rel_field(self, field):
+        if field.get_internal_type() in ('ForeignKey, OneToOneField, ManyToManyField'):
+            return True
+        else:
+            return False
+
+    def _get_related_choices(self, field):
+        '''
+        Make choices from related fields.
+        Choices are all the distinct() objects in the related model
+        Choices are of the form [pk, __str__()]
+
+        raises TypeError if the field is not a Relationship field
+        '''
+        if self.is_rel_field(field):
+            field.choices = [[fkf.pk, fkf] for fkf in sorted(field.rel.to.objects.distinct())]
+        else:
+             raise TypeError("%s cannot be used for traversal."
+                            "Traversal fields must be one of type ForeignKey, OneToOneField, ManyToManyField"
+                            % orm_name
+             )
+
+    def get_choices_from_distinct(self, field):
+        '''
+        Generate a list of choices from a distinct() call.
+        '''
+
+        field.choices = [[x, x]
+            for x in
+              self.model.objects.distinct()
+                           .order_by(field.name)
+                           .values_list(field.name, flat=True)
+          ]
+
+    def get_range_field(self, field, name):
+        '''
+        Use a RangeField form element for given model field
+        '''
+        try:
+            return RangeField(label=field.verbose_name, required=False, model=self.model, field=name)
+        except:
+            raise TypeError("RangeFields should only be used with model fields based on a python numeric type")
+
+    def get_multiplechoice_field(self, field, name):
+        '''
+        Use a MultipleChoiceField form element for given model field
+        '''
+        return MultipleChoiceField(label=field.verbose_name, required=False, widget=CheckboxSelectMultiple, choices=field.choices)
+
+    def get_choice_or_range_field(self, field, name):
+        '''
+        For numeric fields.
+        If there are defined choices return a MultipleChoiceField.
+        Otherwise return a RangeField.
+        '''
+        if field.choices == []:
+            return self.get_range_field(field, name)
+        else:
+            return self.get_multiplechoice_field(field)
+
+    def build_type_foreignkey(self, field, name):
+        self._get_related_choices(field)
+        return self.get_multiplechoice_field(field, name)
+
+    def build_type_manytomanyfield(self, field, name):
+        self._get_related_choices(field)
+        return self.get_multiplechoice_field(field, name)
+
+    def build_type_onetoonefield(self, field, name):
+        self._get_related_choices(field)
+        return self.get_multiplechoice_field(field, name)
+
+    def build_type_autofield(self, field, name):
+        '''
+        Return a RangeField for AutoField type elements
+        '''
+        return self.get_range_field(field, name)
+
+    def build_type_bigintegerfield(self, field, name):
+        return self.get_choice_or_range_field(field, name)
+
+    def build_type_integerfield(self, field, name):
+        return self.get_choice_or_range_field(field, name)
+
+    def build_type_decimalfield(self, field, name):
+        return self.get_choice_or_range_field(field, name)
+
+    def build_type_floatfield(self, field, name):
+        return self.get_choice_or_range_field(field, name)
+
+    def build_type_positiveintegerfield(self, field, name):
+        return self.get_choice_or_range_field(field, name)
+
+    def build_type_positivesmallintegerfield(self, field, name):
+        return self.get_choice_or_range_field(field, name)
+
+    def build_type_smallintegerfield(self, field, name):
+        return self.get_choice_or_range_field(field, name)
+
+    def build_type_booleanfield(self, field, name):
+        '''
+        Return a MultipleChoiceField for BooleanField type elements
+        Choices are [[True, 'Yes'], [False, 'No']]
+        '''
+        field.choices = [[True, 'Yes'], [False, 'No']]
+        return self.get_multiplechoice_field(field, name)
+
+    def build_type_nullbooleanfield(self, field, name):
+        '''
+        Return a MultipleChoiceField for NullBooleanField type elements
+        Choices are [[True, 'Yes'], [False, 'No'], [None, 'Unknown']]
+        '''
+        field.choices = [[True, 'Yes'], [False, 'No'], [None, 'Unknown']]
+        return self.get_multiplechoice_field(field, name)
+
+
     def clean(self):
         cleaned_data = super(ModelQueryForm, self).clean()
-        
+
         return cleaned_data
-    
-    def process_model_query(self, data_set = None):
+
+    def process_model_query(self, data_set=None):
         if data_set is None:
             data_set = self.model.objects.all()
-        
+
         try:
             data_set.exists()
         except:
             raise ImproperlyConfigured("Model query requires a QuerySet to filter against")
-    
+
         full_query = []
         for field in self.changed_data:
             values = self.cleaned_data[field]
@@ -99,14 +212,14 @@ class ModelQueryForm(Form):
                         range_list = []
                         range_list.append(Q(**{field + '__gte': range_min}))
                         range_list.append(Q(**{field + '__lte': range_max}))
-                        
+
                         query_list.append(reduce(operator.and_, range_list))
                 full_query.append(reduce(operator.or_, query_list))
         if full_query:
             data_set = data_set.filter(reduce(operator.and_, full_query))
-            
+
         return data_set
-    
+
     def pretty_print_query(self):
         vals = OrderedDict()
         for field in self.changed_data:
@@ -117,23 +230,24 @@ class ModelQueryForm(Form):
                         for selected in self.cleaned_data[field]:
                             try:
                                 vals[self.fields[field].label]
-                                vals[self.fields[field].label] = "%s; %s" % (vals[self.fields[field].label],dict(choices)[int(selected)])
+                                vals[self.fields[field].label] = "%s; %s" % (vals[self.fields[field].label], dict(choices)[int(selected)])
                             except:
-                                vals[self.fields[field].label] = "%s" % dict(choices)[int(selected)]                                
+                                vals[self.fields[field].label] = "%s" % dict(choices)[int(selected)]
                     except:
-                        vals[self.fields[field].label] = "%s - %s" %(self.cleaned_data[field][0], self.cleaned_data[field][1])
+                        vals[self.fields[field].label] = "%s - %s" % (self.cleaned_data[field][0], self.cleaned_data[field][1])
                         if len(self.cleaned_data[field]) == 3:
-                            vals[self.fields[field].label] = "%s. %s" %(vals[self.fields[field].label], "Includes Empty Values")
+                            vals[self.fields[field].label] = "%s. %s" % (vals[self.fields[field].label], "Includes Empty Values")
 
             except Exception, e:
                 print e
         return vals
-    
+
 class RangeWidget(MultiWidget):
-    def __init__(self, attrs = None, mode = 0):
+    # SHOW ALLOW EMPTY ONYL ON FIELDS THAT ALLOW NULL
+    def __init__(self, attrs=None, mode=0):
         _widgets = (
-            TextInput(attrs = attrs),
-            TextInput(attrs = attrs),
+            TextInput(attrs=attrs),
+            TextInput(attrs=attrs),
             CheckboxInput()
         )
         super(RangeWidget, self).__init__(_widgets, attrs)
@@ -157,8 +271,8 @@ class RangeWidget(MultiWidget):
         except:
             pass
         return value
-    
-    def format_output(self, rendered_widgets):   
+
+    def format_output(self, rendered_widgets):
         return mark_safe(u'%s %s<br/> %s %s' % \
             (rendered_widgets[0], rendered_widgets[1], 'Allow Empty Values', rendered_widgets[2]))
 
@@ -168,7 +282,7 @@ class RangeField(Field):
         range_max = model.objects.all().aggregate(Max(field))[field + "__max"]
         super(RangeField, self).__init__(*args, **kwargs)
         self.widget = RangeWidget({'min':range_min, 'max':range_max})
-        
+
     def to_python(self, value):
         if not value:
             return []
@@ -179,12 +293,12 @@ class RangeField(Field):
         except:
             try:
                 value['min'] = float(value['min'])
-                value['max'] = float(value['max'])                
+                value['max'] = float(value['max'])
             except:
                 raise ValidationError('Values in RangeField must be numeric')
-            
+
         return value
-    
+
     def validate(self, value):
         if value:
             if value['min'] > value['max']:
