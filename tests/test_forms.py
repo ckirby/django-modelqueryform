@@ -22,6 +22,10 @@ from django.core.exceptions import ImproperlyConfigured
 from tests.models import RelatedModelForTest
 from django.db.models.query_utils import Q
 from collections import OrderedDict
+try:
+    from functools import reduce
+except ImportError:  # Python < 3
+    pass
 
 
 def get_model_field(model, field_name):

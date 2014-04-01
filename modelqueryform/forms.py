@@ -6,7 +6,10 @@ from django.db.models.query_utils import Q
 from .widgets import RangeField
 from .utils import traverse_related_to_field
 from django.forms.widgets import CheckboxSelectMultiple
-from django.db.models.query import QuerySet
+try:
+    from functools import reduce
+except ImportError:  # Python < 3
+    pass
 
 
 class ModelQueryForm(Form):
