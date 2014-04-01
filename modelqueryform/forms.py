@@ -120,7 +120,7 @@ class ModelQueryForm(Form):
         raises TypeError if the field is not a Relationship field
         '''
         if model_field.get_internal_type() in self._rel_fields():
-            choices = [[fkf.pk, fkf] for fkf in sorted(model_field.rel.to.objects.all())]
+            choices = [[fkf.pk, fkf] for fkf in model_field.rel.to.objects.all()]
         else:
             raise TypeError("%s cannot be used for traversal."
                             "Traversal fields must be one of type ForeignKey, OneToOneField, ManyToManyField"
