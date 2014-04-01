@@ -342,7 +342,7 @@ class TestModelqueryformForms(TestCase):
         self.assertIsInstance(pretty_print,
                               OrderedDict,
                               ".pretty_print_query returns an OrderedDict")
-        self.assertEqual(pretty_print.keys().sort(),
+        self.assertEqual(list(pretty_print.keys()).sort(),
                          (['integer', 'boolean', 'integer_with_choices']).sort(),
                          "Should have .keys() that match the form field names")
 
@@ -352,13 +352,13 @@ class TestModelqueryformForms(TestCase):
 
         form = FormTestWithTextNamedMethodAndProcessor({'text': "blah"})
         form.is_valid()
-        self.assertEqual(form.pretty_print_query().keys().sort(),
+        self.assertEqual(list(form.pretty_print_query().keys()).sort(),
                          (['text'].sort()),
                          "Should have a named print method")
 
         form = FormTestWithTextTypeMethodAndProcessor({'text': "blah"})
         form.is_valid()
-        self.assertEqual(form.pretty_print_query().keys().sort(),
+        self.assertEqual(list(form.pretty_print_query().keys()).sort(),
                          (['text'].sort()),
                          "Should have a named print method")
 
