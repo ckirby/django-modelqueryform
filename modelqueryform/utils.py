@@ -10,5 +10,5 @@ def traverse_related_to_field(field_name, model):
         return model._meta.get_field_by_name(field_name)[0]
     else:
         return traverse_related_to_field("__".join(jumps[1:]),
-                                               model._meta.get_field_by_name(jumps[:1][0])[0].rel.to
+                                        model._meta.get_field_by_name(jumps[:1][0])[0].rel.to
         )
