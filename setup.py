@@ -1,35 +1,54 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
 import os
-from setuptools import setup, find_packages
+import sys
 
-README = open(os.path.join(os.path.dirname(__file__), 'README.rst')).read()
+import modelqueryform
 
-# allow setup.py to be run from any path
-os.chdir(os.path.normpath(os.path.join(os.path.abspath(__file__), os.pardir)))
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
+
+version = modelqueryform.__version__
+
+if sys.argv[-1] == 'publish':
+    os.system('python setup.py sdist upload')
+    print("You probably want to also tag the version now:")
+    print("  git tag -a %s -m 'version %s'" % (version, version))
+    print("  git push --tags")
+    sys.exit()
+
+readme = open('README.rst').read()
+history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 
 setup(
-    name = 'django-modelqueryform',
-    version = '0.5.3',
-    description = 'Make a form to query against a model',
-    long_description = README,
-    
-    author = 'Chaim Kirby',
-    author_email = 'chaimkirby@gmail.com',
-    url = 'http://github.com/ckirby/django-modelqueryform',
-    license = 'BSD License', 
-    
-    packages=find_packages(),
-    include_package_data = True,
-    install_requires=['Django >=1.4'],
-    
-    classifiers = [
-        'Environment :: Web Environment',
+    name='django-modelqueryform',
+    version=version,
+    description="""App for generating forms allowing users to build model queries""",
+    long_description=readme + '\n\n' + history,
+    author='Chaim Kirby',
+    author_email='chaim.kirby@gmail.com',
+    url='https://github.com/ckirby/django-modelqueryform',
+    packages=[
+        'modelqueryform',
+    ],
+    include_package_data=True,
+    install_requires=[
+    ],
+    license="BSD",
+    zip_safe=False,
+    keywords='django-modelqueryform',
+    classifiers=[
+        'Development Status :: 5 - Production/Stable',
         'Framework :: Django',
         'Intended Audience :: Developers',
-        'License :: OSI Approved :: BSD License', 
-        'Operating System :: OS Independent',
-        'Programming Language :: Python',
+        'License :: OSI Approved :: BSD License',
+        'Natural Language :: English',
+        'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
-        'Topic :: Internet :: WWW/HTTP',
-        'Topic :: Internet :: WWW/HTTP :: Dynamic Content',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.3',
     ],
 )

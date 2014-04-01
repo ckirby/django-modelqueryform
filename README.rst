@@ -1,11 +1,36 @@
-Djano Model Query Form
-======================
+=============================
+django-modelqueryform
+=============================
 
-Provides a Form class for subclassing which provides a form for generating queries against a model and a form processor to run the generated query
+.. image:: https://badge.fury.io/py/django-modelqueryform.png
+    :target: https://badge.fury.io/py/django-modelqueryform
 
-::
+.. image:: https://travis-ci.org/ckirby/django-modelqueryform.png?branch=master
+    :target: https://travis-ci.org/ckirby/django-modelqueryform
 
-    $ pip install django-modelqueryform
+.. image:: https://coveralls.io/repos/ckirby/django-modelqueryform/badge.png?branch=master
+    :target: https://coveralls.io/r/ckirby/django-modelqueryform?branch=master
+
+App for generating forms allowing users to build model queries
+
+Documentation
+-------------
+
+The full documentation is at https://django-modelqueryform.readthedocs.org.
+
+Quickstart
+----------
+
+Install django-modelqueryform::
+
+    pip install django-modelqueryform
+
+Then use it in a project::
+
+    import modelqueryform
+
+Features
+--------
     
 This will give you a Form class ModelQueryForm that must be subclassed
 
