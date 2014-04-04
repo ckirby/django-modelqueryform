@@ -167,19 +167,17 @@ class ModelQueryForm(Form):
                 filters.append(Q(**{model_field: range_min}))
 
             if values['allow_empty']:
-                filters.append(Q(**{model_field: None}))
+                filters.append(Q(**{model_field + '__isnull': True}))
 
             return reduce(operator.or_, filters)
         except:
             return None
 
     def get_multiplechoice_field_filter(self, model_field, values):
-        filters = []
         try:
-            for value in values:
-                filters.append(Q(**{model_field: value}))
-
-            return reduce(operator.or_, filters)
+            return reduce(operator.or_,
+                          [Q(**{model_field: value}) for value in values]
+                    )
         except:
             return None
 
