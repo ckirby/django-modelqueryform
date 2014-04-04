@@ -11,7 +11,7 @@ Tests for `django-modelqueryform` widgets module.
 from django.test import TestCase
 
 from modelqueryform.widgets import RangeWidget, RangeField
-from django.forms.widgets import TextInput, CheckboxInput
+from django.forms.widgets import NumberInput, CheckboxInput
 from tests.models import BaseModelForTest
 from django.core.exceptions import ValidationError
 
@@ -53,20 +53,20 @@ class TestModelqueryformWidgets(TestCase):
 
     def test_widget(self):
         empty_widget = RangeWidget()
-        self.assertListEqual([type(TextInput()), type(TextInput())],
+        self.assertListEqual([type(NumberInput()), type(NumberInput())],
                              [type(w) for w in empty_widget.widgets],
-                             "Should be 2 TextInput widgets"
+                             "Should be 2 NumberInput widgets"
         )
 
         no_null_widget = RangeWidget(attrs={"min": 11, "max": 19})
-        self.assertListEqual([TextInput(attrs={"min":11, "max":19}).attrs,
-                              TextInput(attrs={"min":11, "max":19}).attrs],
+        self.assertListEqual([NumberInput(attrs={"min":11, "max":19}).attrs,
+                              NumberInput(attrs={"min":11, "max":19}).attrs],
                              [w.attrs for w in no_null_widget.widgets],
                              "Text Input should get attrs"
         )
 
-        self.assertHTMLEqual('<input max="19" min="11" name="0" type="text" />'
-                             '<input max="19" min="11" name="1" type="text" />',
+        self.assertHTMLEqual('<input max="19" min="11" name="0" type="number" />'
+                             '<input max="19" min="11" name="1" type="number" />',
                              no_null_widget.format_output(
                                 render_widgets(
                                     no_null_widget.widgets)),
@@ -74,25 +74,25 @@ class TestModelqueryformWidgets(TestCase):
         )
 
         null_no_attrs_widget = RangeWidget(allow_null=True)
-        self.assertListEqual([type(TextInput()),
-                              type(TextInput()),
+        self.assertListEqual([type(NumberInput()),
+                              type(NumberInput()),
                               type(CheckboxInput())
                              ],
                              [type(w) for w in null_no_attrs_widget.widgets],
-                             "Should be 2 TextInput widgets"
+                             "Should be 2 NumberInput widgets"
         )
 
         null_attrs_widget = RangeWidget(allow_null=True, attrs={"min": 11, "max": 19})
-        self.assertListEqual([TextInput(attrs={"min":11, "max":19}).attrs,
-                              TextInput(attrs={"min":11, "max":19}).attrs,
+        self.assertListEqual([NumberInput(attrs={"min":11, "max":19}).attrs,
+                              NumberInput(attrs={"min":11, "max":19}).attrs,
                               {}
                              ],
                              [w.attrs for w in null_attrs_widget.widgets],
-                             "Text Input should get attrs, Checkbox should not"
+                             "NumberInput should get attrs, Checkbox should not"
         )
 
-        self.assertHTMLEqual('<input max="19" min="11" name="0" type="text" />'
-                             '<input max="19" min="11" name="1" type="text" />'
+        self.assertHTMLEqual('<input max="19" min="11" name="0" type="number" />'
+                             '<input max="19" min="11" name="1" type="number" />'
                              '<br/> Include Empty values '
                              '<input name="2" type="checkbox">',
                              null_attrs_widget.format_output(
