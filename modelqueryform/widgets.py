@@ -1,9 +1,10 @@
-from django.forms.widgets import CheckboxSelectMultiple, MultiWidget, TextInput, CheckboxInput
+from django.forms.widgets import MultiWidget, CheckboxInput, NumberInput
 from django.utils.safestring import mark_safe
 from django.forms.fields import Field
 from django.core.exceptions import ValidationError
 from django.db.models.aggregates import Min, Max
 from .utils import traverse_related_to_field
+
 
 class RangeWidget(MultiWidget):
     '''
@@ -16,8 +17,8 @@ class RangeWidget(MultiWidget):
 
     def __init__(self, allow_null=False, attrs=None, mode=0):
         _widgets = (
-            TextInput(attrs=attrs),
-            TextInput(attrs=attrs),
+            NumberInput(attrs=attrs),
+            NumberInput(attrs=attrs),
         )
 
         if allow_null:
