@@ -1,6 +1,6 @@
-=============================
+=====================
 django-modelqueryform
-=============================
+=====================
 
 .. image:: https://badge.fury.io/py/django-modelqueryform.png
     :target: https://badge.fury.io/py/django-modelqueryform
@@ -11,38 +11,58 @@ django-modelqueryform
 .. image:: https://coveralls.io/repos/ckirby/django-modelqueryform/badge.png?branch=master
     :target: https://coveralls.io/r/ckirby/django-modelqueryform?branch=master
 
-App for generating forms allowing users to build model queries
+*django-modelqueryform* is a flexible app that helps you build Q object generating forms.
+
+It is a great tool if you want you users to be able to do filtered searches against your models.
 
 Documentation
 -------------
 
 The full documentation is at https://django-modelqueryform.readthedocs.org.
 
-Quickstart
-----------
-
-Install django-modelqueryform::
-
-    pip install django-modelqueryform
-
-Then use it in a project::
-
-    import modelqueryform
 
 Features
 --------
     
-This will give you a Form class ModelQueryForm that must be subclassed
+* Useable default FormFields for ModelFields that:
 
-ModelQueryForm has the attributes:
+    * Have `.choices` defined or are inherently made of choices (ie. `BooleanField` and `NullBooleanField`)
+    * Are represented as numeric types (eg. `IntegerField`, `FloatField`, etc.)
+    * Text backed fields need code written to handle them. That is easy though, because:
+ 
+* Creation of FormFields, Q objects, and User readable query terms are completely customizable. You can target ModelFields:
 
-    * model (Required)
-        * The model class to query 
-    * include []
-        * A list of fields to include. 
-        * Named as they would be in the orm
-    * traverse_fields []
-        * Relationship fields to follow the relationship to the next level
-        * Follows ForeignKey, OneToOneField, ManyToManyField
-        * If you use the __ (double underscore) orm notation in include, you must have the relationship field(s) in this list  
-   
+    * By name (If the field has specific requirements)
+    * By field type (Use the same widget or Q object builder for all `CharField`s)
+    
+* Can follow Model relationships or treat relationship fields as `.choices`
+* Provides a new Field and Widget (`RangeField`, `RangeWidget`). These allow users to generate a `__gte`, `__lte` pair for the orm, optionally also including an `__isnull`
+
+    * RangeField
+        
+        * Dynamically generates min and max boundaries. (Aggregate `Min` and `Max` on the model field)
+        * If `null=True` on the ModelField allows user to indicate if they want to include null values in the query
+    
+    * RangeWidget
+        
+        * Returns a `MultiWidget` with 2 `NumberInput` widgets (with min and max attributes)         
+
+Requirements
+------------
+
+* Django 1.5.1+
+* Python 2.7, 3.3
+
+Quickstart
+----------
+
+Install django-modelqueryform using `pip`::
+
+    pip install django-modelqueryform
+
+Add `modelqueryform` to your `INSTALLED_APPS` setting::
+
+   INSTALLED_APPS = (
+      ...
+      'modelqueryform',
+   )        

@@ -2,11 +2,13 @@
 Installation
 ============
 
-At the command line::
+Install django-modelqueryform using `pip`::
 
-    $ easy_install django-modelqueryform
-
-Or, if you have virtualenvwrapper installed::
-
-    $ mkvirtualenv django-modelqueryform
     $ pip install django-modelqueryform
+
+Add `modelqueryform` to your `INSTALLED_APPS` setting::
+
+   INSTALLED_APPS = (
+      ...
+      'modelqueryform',
+   )    

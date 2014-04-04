@@ -1,19 +1,32 @@
-.. complexity documentation master file, created by
-   sphinx-quickstart on Tue Jul  9 22:26:36 2013.
-   You can adapt this file completely to your liking, but it should at least
-   contain the root `toctree` directive.
+django-modelqueryform
+=====================
 
-Welcome to django-modelqueryform's documentation!
-=================================================================
+**django-modelqueryform** is a flexible app that helps you build Q object generating forms.
 
-Contents:
+It is a great tool if you want you users to be able to do filtered searches against your models.
+
+
+Installation
+------------
+
+Install django-modelqueryform using `pip`::
+
+    $ pip install django-modelqueryform
+
+Add `modelqueryform` to your `INSTALLED_APPS` setting::
+
+   INSTALLED_APPS = (
+      ...
+      'modelqueryform',
+   )    
+
 
 .. toctree::
    :maxdepth: 2
 
-   readme
-   installation
    usage
+   customization
+   rangetypes
    contributing
    authors
    history
