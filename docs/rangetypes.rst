@@ -19,5 +19,9 @@ RangeWidget
 .. autoclass:: ModelQueryForm
    :members:
    :private-members:
+   
+
+.. automodule:: modelqueryform.utils
+   :members:
 
 
