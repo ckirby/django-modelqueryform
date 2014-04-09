@@ -22,6 +22,7 @@ from django.core.exceptions import ImproperlyConfigured
 from tests.models import RelatedModelForTest
 from django.db.models.query_utils import Q
 from collections import OrderedDict
+from modelqueryform import utils
 try:
     from functools import reduce
 except ImportError:  # Python < 3
@@ -72,7 +73,7 @@ class TestModelqueryformForms(TestCase):
     def setUpRangeFieldFilter(self, field, val_dict):
         form = FormTest(val_dict)
         form.is_valid()
-        range_q = form.get_range_field_filter(
+        range_q = utils.get_range_field_filter(
                               field,
                               form.cleaned_data[field]
                           )
@@ -87,7 +88,7 @@ class TestModelqueryformForms(TestCase):
     def test_multiplechoice_field_fails_without_choices(self):
         boolean_field = get_model_field(BaseModelForTest, 'boolean')
         self.assertRaises(ValueError,
-                          self.base_form.get_multiplechoice_field,
+                          utils.get_multiplechoice_field,
                           boolean_field,
                           boolean_field.choices
         )
@@ -207,7 +208,7 @@ class TestModelqueryformForms(TestCase):
 
     def test_get_related_no_choices(self):
         RelatedModelForTest.objects.all().delete()
-        self.assertEqual(self.base_form._get_related_choices(
+        self.assertEqual(self.base_form.get_related_choices(
                                             get_model_field(
                                                     BaseModelForTest,
                                                     'many_related'
@@ -219,7 +220,7 @@ class TestModelqueryformForms(TestCase):
 
     def test_get_related_choices(self):
         r1, r2, r3, r4 = RelatedModelForTest.objects.all()
-        self.assertEqual(self.base_form._get_related_choices(
+        self.assertEqual(self.base_form.get_related_choices(
                                             get_model_field(
                                                     BaseModelForTest,
                                                     'foreign_related'
@@ -229,7 +230,7 @@ class TestModelqueryformForms(TestCase):
                          "Related field should get choices [[pk, ModelObj]...]"
         )
         self.assertRaises(TypeError,
-                          self.base_form._get_related_choices,
+                          self.base_form.get_related_choices,
                           get_model_field(
                               BaseModelForTest,
                               'integer'
@@ -237,7 +238,7 @@ class TestModelqueryformForms(TestCase):
         )
 
     def test_multiplechoice_field_filter(self):
-        self.assertIsNone(self.base_form.get_multiplechoice_field_filter(
+        self.assertIsNone(utils.get_multiplechoice_field_filter(
                               'integer_with_choices', None
                           ),
                           "None for values should return None"
@@ -245,7 +246,7 @@ class TestModelqueryformForms(TestCase):
 
         form = FormTest({'integer_with_choices':[1, 3]})
         form.is_valid()
-        self.assertIsInstance(form.get_multiplechoice_field_filter(
+        self.assertIsInstance(utils.get_multiplechoice_field_filter(
                               'integer_with_choices',
                               form.cleaned_data['integer_with_choices']
                           ),
@@ -279,7 +280,7 @@ class TestModelqueryformForms(TestCase):
         )
 
     def test_range_field_filter(self):
-        self.assertIsNone(self.base_form.get_range_field_filter(
+        self.assertIsNone(utils.get_range_field_filter(
                               'integer', None
                           ),
                           "None for values should return None"
@@ -447,11 +448,13 @@ class TestModelqueryformForms(TestCase):
                                                 .values_list('integer',
                                                              flat=True
                                                 )
-        self.assertEqual(len(self.base_form.get_choices_from_distinct('integer')),
+        self.assertEqual(len(utils.get_choices_from_distinct(self.base_form.model,
+                                                                      'integer')),
                          len(distinct_call),
                          "There should be .distinct('integer') choices"
         )
-        self.assertEqual(self.base_form.get_choices_from_distinct('integer'),
+        self.assertEqual(utils.get_choices_from_distinct(self.base_form.model,
+                                                                  'integer'),
                          [[x, x] for x in distinct_call],
                          "Tuple key,values should be the same"
         )

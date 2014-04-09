@@ -4,8 +4,10 @@ from django.forms import Form, MultipleChoiceField
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models.query_utils import Q
 from .widgets import RangeField
-from .utils import traverse_related_to_field
+from .utils import traverse_related_to_field, get_range_field
 from django.forms.widgets import CheckboxSelectMultiple
+from modelqueryform.utils import get_range_field_filter, \
+    get_multiplechoice_field, get_multiplechoice_field_filter
 try:
     from functools import reduce
 except ImportError:  # Python < 3
@@ -41,7 +43,7 @@ class ModelQueryForm(Form):
             if orm_name in self.include:
                 self.fields[orm_name] = self._build_form_field(model_field, orm_name)
             if orm_name in self.traverse_fields:
-                if model_field.get_internal_type() in self._rel_fields():
+                if model_field.get_internal_type() in self.rel_fields():
                     self._build_form(model_field.rel.to, orm_name)
                 else:
                     raise TypeError("%s cannot be used for traversal."
@@ -50,34 +52,46 @@ class ModelQueryForm(Form):
                     )
 
     def _build_form_field(self, model_field, name):
-        '''
-        Builds a Form Field type given a model field.
-        First choice is user defined method build_{field.name}(field)
-        Second choice is user defined build_type_{field.get_internal_type()}(field)
-        Third choice is field.choices if available
-        Last choice is ModelQueryForm defaults:
-           RangeField for numeric type field
-           MultipleChoiceField for the boolean type fields
-           MultipleChoiceField for related models, based on a rel.objects.distinct() call
-        Text type fields need user defined methods
-        '''
+        """ Build a form field for a given model field
+
+        :param model_field: Model field to base the form field on
+        :type model_field: django.db.models.fields
+        :param name: The name for the form field (will match a value in self.include)
+        :type name: String
+
+        They type of FormField built is determined in the following order:
+
+        #. `build_FIELD(model_field)` (FIELD is the ModelField name)
+        #. `build_type_FIELD(model_field)` (FIELD is the ModelField type .lower() eg. 'integerfield', charfield', etc.)
+        #. :func:`modelqueryform.utils.get_multiplechoice_field` if model_field has .choices
+        #. :func:`modelqueryform.utils.get_range_field` if the ModelField type is in `self.numeric_fields()`
+        #. :func:`modelqueryform.utils.get_multiplechoice_field` if the ModelField type is in `self.choice_fields()`
+        #. :func:`modelqueryform.utils.get_multiplechoice_field` if the ModelField type is in `self.rel_fields()`
+
+        .. warning::
+            You must define either `build_FIELD(model_field)` or `build_type_FIELD(model_field)`
+            for ModelFields that do not use a `RangeField` or `MultipleChoiceField`
+
+        :returns: FormField
+        :raises: NotImplementedError
+        """
         if hasattr(self, "build_%s" % name.lower()):
             return getattr(self, "build_%s" % name.lower())(model_field)
         if hasattr(self, "build_type_%s" % model_field.get_internal_type().lower()):
             return getattr(self, "build_type_%s" % model_field.get_internal_type().lower())(model_field)
         if not model_field.choices == []:
-            return self.get_multiplechoice_field(model_field, model_field.choices)
+            return get_multiplechoice_field(model_field, model_field.choices)
 
-        if model_field.get_internal_type() in self._numeric_fields():
-            return self.get_range_field(model_field, name)
-        if model_field.get_internal_type() in self._choice_fields():
+        if model_field.get_internal_type() in self.numeric_fields():
+            return get_range_field(self.model, model_field, name)
+        if model_field.get_internal_type() in self.choice_fields():
             choices = [[True, 'Yes'], [False, 'No']]
             if model_field.get_internal_type() == "NullBooleanField":
                 choices += [[None, 'Unknown']]
-            return self.get_multiplechoice_field(model_field, choices)
-        if model_field.get_internal_type() in self._rel_fields():
-            choices = self._get_related_choices(model_field)
-            return self.get_multiplechoice_field(model_field, choices)
+            return get_multiplechoice_field(model_field, choices)
+        if model_field.get_internal_type() in self.rel_fields():
+            choices = self.get_related_choices(model_field)
+            return get_multiplechoice_field(model_field, choices)
 
         raise NotImplementedError(
                     "Field %s doesn't have default field.choices and "
@@ -90,7 +104,11 @@ class ModelQueryForm(Form):
                        model_field.name.lower())
         )
 
-    def _numeric_fields(self):
+    def numeric_fields(self):
+        """Get a list of model fields backed by numeric values
+
+        :returns: list -- model field numeric type names
+        """
         return ['AutoField',
                 'BigIntegerField',
                 'FloatField',
@@ -100,26 +118,35 @@ class ModelQueryForm(Form):
                 'SmallIntegerField',
         ]
 
-    def _choice_fields(self):
+    def choice_fields(self):
+        """Get a list of model fields backed by choice values (Boolean types)
+
+        :returns: list -- model field boolean type names
+        """
         return ['BooleanField',
                 'NullBooleanField',
         ]
 
-    def _rel_fields(self):
+    def rel_fields(self):
+        """Get a list of related model fields
+
+        :returns: list -- related model field types
+        """
         return ['ForeignKey',
                 'ManyToManyField',
                 'OneToOneField',
         ]
 
-    def _get_related_choices(self, model_field):
-        '''
-        Make choices from related fields.
-        Choices are all the distinct() objects in the related model
-        Choices are of the form [pk, __str__()]
+    def get_related_choices(self, model_field):
+        """Make choices from a related
 
-        raises TypeError if the field is not a Relationship field
-        '''
-        if model_field.get_internal_type() in self._rel_fields():
+        :param model_field: Field to generate choices from
+        :type model_field: ForeignKey, OneToOneField, ManyToManyField
+        :returns: list -- [[field.pk, field.__str__()],...]
+        :raises: TypeError
+
+        """
+        if model_field.get_internal_type() in self.rel_fields():
             choices = [[fkf.pk, fkf] for fkf in model_field.rel.to.objects.all()]
         else:
             raise TypeError("%s cannot be used for traversal."
@@ -128,73 +155,17 @@ class ModelQueryForm(Form):
              )
         return choices
 
-    def get_choices_from_distinct(self, model_field):
-        '''
-        Generate a list of choices from a distinct() call.
-        '''
-
-        choices = [[x, x]
-            for x in
-              self.model.objects.distinct()
-                           .order_by(model_field)
-                           .values_list(model_field, flat=True)
-        ]
-
-        return choices
-
-    def get_range_field(self, model_field, name):
-        '''
-        Use a RangeField form element for given model field
-        '''
-        return RangeField(label=model_field.verbose_name,
-                          required=False,
-                          model=self.model,
-                          field=name)
-
-    def get_range_field_filter(self, model_field, values):
-        filters = []
-        try:
-            range_min = values['min']
-            range_max = values['max']
-            if not range_min == range_max:
-                filters.append(reduce(operator.and_,
-                                        [Q(**{model_field + '__gte': range_min}),
-                                         Q(**{model_field + '__lte': range_max}),
-                                         ]
-                                      )
-                               )
-            else:
-                filters.append(Q(**{model_field: range_min}))
-
-            if values['allow_empty']:
-                filters.append(Q(**{model_field + '__isnull': True}))
-
-            return reduce(operator.or_, filters)
-        except:
-            return None
-
-    def get_multiplechoice_field_filter(self, model_field, values):
-        try:
-            return reduce(operator.or_,
-                          [Q(**{model_field: value}) for value in values]
-                    )
-        except:
-            return None
-
-    def get_multiplechoice_field(self, model_field, choices):
-        '''
-        Use a MultipleChoiceField form element for given model field
-        '''
-        if not choices == []:
-            return MultipleChoiceField(label=model_field.verbose_name,
-                                       required=False,
-                                       widget=CheckboxSelectMultiple,
-                                       choices=choices
-            )
-        else:
-            raise ValueError("%s does not have choices. MultipleChoiceField is inappropriate" % model_field.verbose_name)
-
     def process(self, data_set=None):
+        """Filter a QuerySet with the POSTed form values
+
+        :param data_set: QuerySet to filter against
+        :type data_set: QuerySet (Same Model class as self.model)
+
+        .. note:: If data_set == None, self.model.objects.all() is used
+
+        :returns: QuerySet -- data_set.filter(Q object)
+        :raises: ImproperlyConfigured, TypeError
+        """
         if data_set is None:
             data_set = self.model.objects.all()
 
@@ -206,6 +177,32 @@ class ModelQueryForm(Form):
         if not data_set[0]._meta.fields == self.model._meta.fields:
             raise TypeError("Match the QuerySet to this form instances Model")
 
+        filters = self.get_filters()
+
+        if filters.values():
+            query = self._test_filter_func_is_Q(
+                        self.build_query_from_filters(filters)
+            )
+            return data_set.filter(query)
+        else:
+            return data_set
+
+    def get_filters(self):
+        """ Get a dict of the POSTed form values as Q objects
+        Form fields will be evaluated in the following order to generate a Q object:
+
+        #. `filter_FIELD(field_name, values)` (FIELD is the ModelField name)
+        #. `filter_type_FIELD(field_name, values)` (FIELD is the ModelField type .lower() eg. 'integerfield', charfield', etc.)
+        #. :func:`modelqueryform.utils.get_range_field_filter` if the FormField is a RangeField
+        #. :func:`modelqueryform.utils.get_multiplechoice_field_filter` if the FormField is a MultipleChoiceField
+
+        .. warning::
+            You must define either `filter_FIELD(field, values)` or `filter_type_FIELD(field, values)`
+            for ModelFields that do not use a `RangeField` or `MultipleChoiceField`
+
+        :returns: Dict -- {Form field name: Q object,...}
+        :raises: NotImplementedError
+        """
         filters = {}
         for field_name in self.changed_data:
             values = self.cleaned_data[field_name]
@@ -225,11 +222,11 @@ class ModelQueryForm(Form):
                     )
                 elif type(self.fields[field_name]) is RangeField:
                     filters[field] = self._test_filter_func_is_Q(
-                        self.get_range_field_filter(field_name, values)
+                        get_range_field_filter(field_name, values)
                     )
                 elif type(self.fields[field_name]) is MultipleChoiceField:
                     filters[field] = self._test_filter_func_is_Q(
-                        self.get_multiplechoice_field_filter(field_name, values)
+                        get_multiplechoice_field_filter(field_name, values)
                     )
                 else:
                     raise NotImplementedError(
@@ -240,12 +237,7 @@ class ModelQueryForm(Form):
                            field.get_internal_type().lower(),
                            field.name.lower())
                     )
-
-        if filters.values():
-            query = self._test_filter_func_is_Q(self.build_query_from_filters(filters))
-            return data_set.filter(query)
-        else:
-            return data_set
+        return filters
 
     def _test_filter_func_is_Q(self, filter_func_out):
         if type(filter_func_out) is Q:
@@ -256,10 +248,16 @@ class ModelQueryForm(Form):
             )
 
     def build_query_from_filters(self, filters):
-        '''
-        Given a dict{field_name:Q object} return a Q object
-        Override this method if you want to do something other than logical AND between fields
-        '''
+        """Generate a Q object that is a logical AND of a list of Q objects
+
+        .. note::
+            Override this method to build a more complex Q object than AND(filters.values())
+
+        :param filters: Dict of {Form field name: Q object,...}
+        :type filters: dict
+        :returns: Q -- AND(filters.values())
+        :raises: TypeError
+        """
         try:
             values = filters.values()
         except AttributeError:
