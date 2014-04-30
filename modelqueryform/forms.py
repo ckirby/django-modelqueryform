@@ -75,7 +75,7 @@ class ModelQueryForm(Form):
     def _build_form_field(self, model_field, name):
         """ Build a form field for a given model field
 
-        :param model_field: Model field to base the form field on
+        :param model_field: field that the resulting form field will filter
         :type model_field: django.db.models.fields
         :param name: The name for the form field (will match a value in self.include)
         :type name: String
