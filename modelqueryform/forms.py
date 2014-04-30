@@ -5,7 +5,6 @@ from django.core.exceptions import ImproperlyConfigured
 from django.db.models.query_utils import Q
 from .widgets import RangeField
 from .utils import traverse_related_to_field, get_range_field
-from django.forms.widgets import CheckboxSelectMultiple
 from modelqueryform.utils import get_range_field_filter, \
     get_multiplechoice_field, get_multiplechoice_field_filter
 try:
@@ -15,11 +14,30 @@ except ImportError:  # Python < 3
 
 
 class ModelQueryForm(Form):
+    """
+    ModelQueryForm builds a django form that allows complex filtering against a model.
+
+    :ivar Model model: Model to be filtered
+    :ivar list include: List of field names to be included in the standard orm naming
+
+        .. note::
+            To include fields in related models, the related field must be in the `traverse_fields` list
+
+    :ivar list traverse_fields: List of field names that should have their relationship followed.
+
+        .. note::
+            Only ForeignKey, ManytoManyField, and OneToOneField is appropriate for traverse_fields
+
+    """
     model = None
     include = []
     traverse_fields = []
 
     def __init__(self, *args, **kwargs):
+        """
+        :raises ImproperlyConfigured: If `model` is missing
+        :raises ImproperlyConfigured: If `include` and `traverse_fields` overlap
+        """
         super(ModelQueryForm, self).__init__(*args, **kwargs)
         if not self.model:
             raise ImproperlyConfigured("ModelQueryForm needs a model defined as a class attribute")
@@ -36,6 +54,9 @@ class ModelQueryForm(Form):
         return cleaned_data
 
     def _build_form(self, model, field_prepend=None):
+        """
+        :raises TypeError: If a field in `self.traverse_fields` is not a relationship type
+        """
         for model_field in model._meta.fields + model._meta.many_to_many:
             orm_name = model_field.name
             if field_prepend:
@@ -73,7 +94,7 @@ class ModelQueryForm(Form):
             for ModelFields that do not use a `RangeField` or `MultipleChoiceField`
 
         :returns: FormField
-        :raises: NotImplementedError
+        :raises NotImplementedError: For fields that do not have a default `ModelQueryForm` field builder and no custom field builder can be found
         """
         if hasattr(self, "build_%s" % name.lower()):
             return getattr(self, "build_%s" % name.lower())(model_field)
@@ -107,7 +128,7 @@ class ModelQueryForm(Form):
     def numeric_fields(self):
         """Get a list of model fields backed by numeric values
 
-        :returns: list -- model field numeric type names
+        :returns list: Model Field types that are backed by a numeric
         """
         return ['AutoField',
                 'BigIntegerField',
@@ -121,7 +142,7 @@ class ModelQueryForm(Form):
     def choice_fields(self):
         """Get a list of model fields backed by choice values (Boolean types)
 
-        :returns: list -- model field boolean type names
+        :returns list: Model Field types that are backed by a boolean
         """
         return ['BooleanField',
                 'NullBooleanField',
@@ -130,7 +151,7 @@ class ModelQueryForm(Form):
     def rel_fields(self):
         """Get a list of related model fields
 
-        :returns: list -- related model field types
+        :returns list: Model Field types that are relationships
         """
         return ['ForeignKey',
                 'ManyToManyField',
@@ -142,8 +163,8 @@ class ModelQueryForm(Form):
 
         :param model_field: Field to generate choices from
         :type model_field: ForeignKey, OneToOneField, ManyToManyField
-        :returns: list -- [[field.pk, field.__str__()],...]
-        :raises: TypeError
+        :returns list: [[field.pk, field.__str__()],...]
+        :raises TypeError: If `model_field` is not a relationship type
 
         """
         if model_field.get_internal_type() in self.rel_fields():
@@ -163,8 +184,9 @@ class ModelQueryForm(Form):
 
         .. note:: If data_set == None, self.model.objects.all() is used
 
-        :returns: QuerySet -- data_set.filter(Q object)
-        :raises: ImproperlyConfigured, TypeError
+        :returns QuerySet: data_set.filter(Q object)
+        :raises ImproperlyConfigured: No `data_set` to filter
+        :raises TypeError: `data_set` is a different Model class than `self.model`
         """
         if data_set is None:
             data_set = self.model.objects.all()
@@ -200,8 +222,8 @@ class ModelQueryForm(Form):
             You must define either `filter_FIELD(field, values)` or `filter_type_FIELD(field, values)`
             for ModelFields that do not use a `RangeField` or `MultipleChoiceField`
 
-        :returns: Dict -- {Form field name: Q object,...}
-        :raises: NotImplementedError
+        :returns Dict: {Form field name: Q object,...}
+        :raises NotImplementedError: For fields that do not have a default `ModelQueryForm` filter builder and no custom filter builder can be found
         """
         filters = {}
         for field_name in self.changed_data:
@@ -255,8 +277,8 @@ class ModelQueryForm(Form):
 
         :param filters: Dict of {Form field name: Q object,...}
         :type filters: dict
-        :returns: Q -- AND(filters.values())
-        :raises: TypeError
+        :returns Q: AND(filters.values())
+        :raises TypeError: if any value in the filters dict is not a Q object
         """
         try:
             values = filters.values()
@@ -283,6 +305,12 @@ class ModelQueryForm(Form):
         return ",".join([choices[key] for key in cleaned_field_data])
 
     def pretty_print_query(self):
+        """
+        Get an OrderedDict to facilitate printing of generated filter
+
+        :returns:
+        :raises NotImplementedError
+        """
         vals = OrderedDict()
         for field_name in self.changed_data:
             values = self.cleaned_data[field_name]

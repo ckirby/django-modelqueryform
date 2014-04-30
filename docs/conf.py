@@ -46,7 +46,7 @@ source_suffix = '.rst'
 
 # The master toctree document.
 master_doc = 'index'
-
+autoclass_content = 'both'
 # General information about the project.
 project = u'django-modelqueryform'
 copyright = u'2014, Chaim Kirby'
