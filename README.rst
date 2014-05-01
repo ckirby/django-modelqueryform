@@ -11,7 +11,7 @@ django-modelqueryform
 .. image:: https://coveralls.io/repos/ckirby/django-modelqueryform/badge.png?branch=master
     :target: https://coveralls.io/r/ckirby/django-modelqueryform?branch=master
 
-*django-modelqueryform* is a flexible app that helps you build Q object generating forms.
+**django-modelqueryform** is a flexible app that helps you build Q object generating forms.
 
 It is a great tool if you want you users to be able to do filtered searches against your models.
 
@@ -20,7 +20,13 @@ Documentation
 
 The full documentation is at https://django-modelqueryform.readthedocs.org.
 
+Requirements
+------------
 
+* Django 1.5.1+
+* Python 2.7, 3.3  
+
+   
 Features
 --------
     
@@ -33,7 +39,7 @@ Features
 * Creation of FormFields, Q objects, and User readable query terms are completely customizable. You can target ModelFields:
 
     * By name (If the field has specific requirements)
-    * By field type (Use the same widget or Q object builder for all `CharField`s)
+    * By field type (Use the same widget or Q object builder for all `CharField`\ s)
     
 * Can follow Model relationships or treat relationship fields as `.choices`
 * Provides a new Field and Widget (`RangeField`, `RangeWidget`). These allow users to generate a `__gte`, `__lte` pair for the orm, optionally also including an `__isnull`
@@ -46,23 +52,4 @@ Features
     * RangeWidget
         
         * Returns a `MultiWidget` with 2 `NumberInput` widgets (with min and max attributes)         
-
-Requirements
-------------
-
-* Django 1.5.1+
-* Python 2.7, 3.3
-
-Quickstart
-----------
-
-Install django-modelqueryform using `pip`::
-
-    pip install django-modelqueryform
-
-Add `modelqueryform` to your `INSTALLED_APPS` setting::
-
-   INSTALLED_APPS = (
-      ...
-      'modelqueryform',
-   )        
+     

@@ -261,9 +261,16 @@ class ModelQueryForm(Form):
                     )
         return filters
 
-    def _test_filter_func_is_Q(self, filter_func_out):
-        if type(filter_func_out) is Q:
-            return filter_func_out
+    def _test_filter_func_is_Q(self, filter_func):
+        """
+        Make sure that a filter is a Q object
+
+        :param filter_func: Object to test
+        :type filter_func: Q
+        :raises TypeError: if filter is not a Q object
+        """
+        if type(filter_func) is Q:
+            return filter_func
         else:
             raise TypeError("Filter methods must return a Q object."
                             "If you have a list use reduce with operator.or_ or operator.and_"
@@ -291,6 +298,20 @@ class ModelQueryForm(Form):
         return reduce(operator.and_, values)
 
     def get_range_field_print(self, form_field, cleaned_field_data):
+        """
+        Default string representation of multichoice field
+
+        :param form_field: FormField (Unused)
+        :type form_field: str
+
+            .. note:: FormField is needed to lookup choices
+
+        :param cleaned_field_data: the cleaned_data for the field
+        :type cleaned_field_data: dict
+
+        :returns str: "MIN - MAX [(include empty values)]"
+        """
+
         pretty_print = "%s - %s" % (cleaned_field_data["min"],
                                     cleaned_field_data["max"])
         if cleaned_field_data["allow_empty"] is True:
@@ -299,6 +320,19 @@ class ModelQueryForm(Form):
         return pretty_print
 
     def get_multichoice_field_print(self, form_field, cleaned_field_data):
+        """
+        Default string representation of multichoice field
+
+        :param form_field: FormField
+        :type form_field: str
+
+            .. note:: FormField is needed to lookup choices
+
+        :param cleaned_field_data: the cleaned_data for the field
+        :type cleaned_field_data: dict
+
+        :returns str: Comma delimited get_display_FIELD() for selected choices
+        """
         choices = dict((str(k), v)
                     for k, v in dict(form_field.choices).items())
 
@@ -308,8 +342,8 @@ class ModelQueryForm(Form):
         """
         Get an OrderedDict to facilitate printing of generated filter
 
-        :returns:
-        :raises NotImplementedError
+        :returns dict: {form field name: string representation of filter,...}
+        :raises NotImplementedError: For fields that do not have a default print builder and no custom print builder can be found
         """
         vals = OrderedDict()
         for field_name in self.changed_data:

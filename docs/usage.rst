@@ -13,7 +13,7 @@ For these examples we will use the following models::
                                                            ["PG", "Post Graduate"]]
                                 )
    
-   class MyInstitutions(models.Model):
+   class MyInstitution(models.Model):
       name = models.CharField(max_length=50)
       accredited = models.BooleanField()
       
@@ -21,52 +21,84 @@ For these examples we will use the following models::
          return "%s" % self.name
    
 
-To use django-modelqueryform in a project import it into your forms.py::
+To use **django-modelqueryform** in a project import it into forms.py::
 
    import modelqueryform
     
-Then you can use it as a Base class for your forms::
+Then we can use it as a Base class for your forms::
 
    class MyModelQueryForm(modelqueryform.ModelQueryForm):
        model = MyModel
        inclue = ['age','employed','degree']
        
-Thats it! Instantiating MyModelQueryForm will give you a form with 3 widgets
+Thats it! Instantiating MyModelQueryForm gives us a form with 3 widgets
 
 * Age (\ :ref:`rangefield` using a \ :ref:`rangewidget`)
 * Employed (`MultipleChoiceField` using a `CheckboxSelectMultiple` widget)
 * Degree (`MultipleChoiceField` using a `CheckboxSelectMultiple` widget)
 
-Once the form is POSTed to your view you can use it to filter your model::
+Once the form is POSTed to the view it is used to filter your model::
 
    query_form = MyModelQueryForm(request.POST)
    my_models = query_form.process()
    
-`process()` generates a Q object which is a logical AND of the Q objects generated for each widget. 
+`process([data_set=None])` generates a Q object which is a logical AND of the Q objects generated for each widget. 
 It uses the resulting Q object to filter the associated model class.
 
-* `process()` optionally accepts a QuerySet of the model class used for the form
-
-   * If no QuerySet is passed, the Q object will run against model.objects.all()
+.. note:: `process()` optionally accepts a QuerySet of the model class used for the form
+   If no QuerySet is passed, the Q object will run against model.objects.all()
    
 Using `pretty_print_query()` you get a dict() of the form {str(field.label): str(field values)} to parse into a template::
 
    query_form = MyModelQueryForm(request.POST)
    query_parameters = query_form.pretty_print_query()
      
-     
+Working with Relations
+----------------------
+
+**django-modelqueryform** can work with realtionship fields in two different ways, either following the relation or using the relationship field as a choice field.
+
+Let's add a new field to `MyModel` from the example above::
+
+   class MyModel(models.Model):
+      ...
+      institution = models.ForeignKey('MyInstitution')
+      
+If we want our users to be able to select for (non)-accredited institions we would instantiate the form like so::
+
+   class MyModelQueryForm(modelqueryform.ModelQueryForm):
+       model = MyModel
+       inclue = ['age','employed','degree', 'institution__accredited']
+       traverse_fields = ['institution',]
+       
+.. note::
+   To follow a relationship with an `include` field, make sure to put the relationship field into traverse_fields
+   
+Alternatively we can use the relationship field as a `MultipleChoiceField`::
+
+   class MyModelQueryForm(modelqueryform.ModelQueryForm):
+       model = MyModel
+       inclue = ['age','employed','degree', 'institution']
+       
+.. warning::
+   To make the choices for a relationship field, **django-modelqueryform** does an `objects.distinct()` call. Be aware of the size of the resulting QuerySet
+
 
 Defaults
 --------
 
-**dajgno-modelqueryform** tries to provide meaningful default where it can.
+**djagno-modelqueryform** tries to provide meaningful default where it can.
 Default widgets, Q objects, and print representation exist for model fields that 
 are stored as numeric values or have choices (either defined or by default, ie. BooleanField(s))
+
+.. note:: See :doc:`customization` for how to handle field type that don't have defaults
 
 .. |multichoice| replace:: `MultipleChoiceField` / `CheckboxSelectMultiple`
 .. |range| replace:: :ref:`rangefield` /  :ref:`rangewidget`
 .. |multichoiceq| replace:: OR([field=value],...)
-.. |rangeq| replace:: AND([field__gte=min],[field__lte=max]), OR(field__isnull=True) 
+.. |rangeq| replace:: AND([field__gte=min],[field__lte=max]), OR(field__isnull=True)
+.. |multichoicep| replace:: 'CHOICE1,CHOICE2,...CHOICEn'
+.. |rangep| replace:: 'MIN - MAX [(include empty values)]'  
 
 **Default Fields**
 
@@ -74,13 +106,13 @@ are stored as numeric values or have choices (either defined or by default, ie. 
 | Model Field                | Form Field/Widget | Q Object       | Print Representation |
 |                            |                   |                |                      |
 +============================+===================+================+======================+
-| AutoField                  | |range|           | |rangeq|       |                      |
+| AutoField                  | |range|           | |rangeq|       | |rangep|             |
 +----------------------------+-------------------+----------------+----------------------+
-| BigIntegerField            | |range|           | |rangeq|       |                      |
+| BigIntegerField            | |range|           | |rangeq|       | |rangep|             |
 +----------------------------+-------------------+----------------+----------------------+
 | BinaryField                |                   |                |                      |
 +----------------------------+-------------------+----------------+----------------------+
-| BooleanField               | |multichoice|     | |multichoiceq| |                      |
+| BooleanField               | |multichoice|     | |multichoiceq| | |multichoicep|       |
 +----------------------------+-------------------+----------------+----------------------+
 | CharField                  |                   |                |                      |
 +----------------------------+-------------------+----------------+----------------------+
@@ -90,7 +122,7 @@ are stored as numeric values or have choices (either defined or by default, ie. 
 +----------------------------+-------------------+----------------+----------------------+
 | DateTimeField              |                   |                |                      |
 +----------------------------+-------------------+----------------+----------------------+
-| DecimalField               | |range|           | |rangeq|       |                      |
+| DecimalField               | |range|           | |rangeq|       | |rangep|             |
 +----------------------------+-------------------+----------------+----------------------+
 | EmailField                 |                   |                |                      |
 +----------------------------+-------------------+----------------+----------------------+
@@ -98,25 +130,25 @@ are stored as numeric values or have choices (either defined or by default, ie. 
 +----------------------------+-------------------+----------------+----------------------+
 | FilePathField              |                   |                |                      |
 +----------------------------+-------------------+----------------+----------------------+
-| FloatField                 | |range|           | |rangeq|       |                      |
+| FloatField                 | |range|           | |rangeq|       | |rangep|             |
 +----------------------------+-------------------+----------------+----------------------+
 | ImageField                 |                   |                |                      |
 +----------------------------+-------------------+----------------+----------------------+
-| IntegerField               | |range|           | |rangeq|       |                      |
+| IntegerField               | |range|           | |rangeq|       | |rangep|             |
 +----------------------------+-------------------+----------------+----------------------+
 | IPAddressField             |                   |                |                      |
 +----------------------------+-------------------+----------------+----------------------+
 | GenericIPAddressField      |                   |                |                      |
 +----------------------------+-------------------+----------------+----------------------+
-| NullBooleanField           | |multichoice|     | |multichoiceq| |                      |
+| NullBooleanField           | |multichoice|     | |multichoiceq| | |multichoicep|       |
 +----------------------------+-------------------+----------------+----------------------+
-| PositiveIntegerField       | |range|           | |rangeq|       |                      |
+| PositiveIntegerField       | |range|           | |rangeq|       | |rangep|             |
 +----------------------------+-------------------+----------------+----------------------+
-| PositiveSmallIntegerField  | |range|           | |rangeq|       |                      |
+| PositiveSmallIntegerField  | |range|           | |rangeq|       | |rangep|             |
 +----------------------------+-------------------+----------------+----------------------+
 | SlugField                  |                   |                |                      |
 +----------------------------+-------------------+----------------+----------------------+
-| SmallIntegerField          | |range|           | |rangeq|       |                      |
+| SmallIntegerField          | |range|           | |rangeq|       | |rangep|             |
 +----------------------------+-------------------+----------------+----------------------+
 | TextField                  |                   |                |                      |
 +----------------------------+-------------------+----------------+----------------------+
@@ -124,11 +156,11 @@ are stored as numeric values or have choices (either defined or by default, ie. 
 +----------------------------+-------------------+----------------+----------------------+
 | URLField                   |                   |                |                      |
 +----------------------------+-------------------+----------------+----------------------+
-| ForeignKey                 | |multichoice|     | |multichoiceq| |                      |
+| ForeignKey                 | |multichoice|     | |multichoiceq| | |multichoicep|       |
 +----------------------------+-------------------+----------------+----------------------+
-| ManyToManyField            | |multichoice|     | |multichoiceq| |                      |
+| ManyToManyField            | |multichoice|     | |multichoiceq| | |multichoicep|       |
 +----------------------------+-------------------+----------------+----------------------+
-| OneToOneField              | |multichoice|     | |multichoiceq| |                      |
+| OneToOneField              | |multichoice|     | |multichoiceq| | |multichoicep|       |
 +----------------------------+-------------------+----------------+----------------------+
 
 
