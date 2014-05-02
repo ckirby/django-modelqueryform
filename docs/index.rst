@@ -10,7 +10,6 @@ Contents
    installation
    usage
    customization
-   rangetypes
+   reference
    contributing
    authors
-   history

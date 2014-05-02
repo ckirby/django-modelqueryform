@@ -15,6 +15,11 @@ django-modelqueryform
 
 It is a great tool if you want you users to be able to do filtered searches against your models.
 
+Project
+-------
+
+The project can be found at https://github.com/ckirby/django-modelqueryform
+
 Documentation
 -------------
 

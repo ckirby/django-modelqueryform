@@ -4,9 +4,9 @@ from django.forms import Form, MultipleChoiceField
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models.query_utils import Q
 from .widgets import RangeField
-from .utils import traverse_related_to_field, get_range_field
-from modelqueryform.utils import get_range_field_filter, \
-    get_multiplechoice_field, get_multiplechoice_field_filter
+from .utils import traverse_related_to_field, get_range_field, \
+    get_range_field_filter, get_multiplechoice_field, \
+    get_multiplechoice_field_filter
 try:
     from functools import reduce
 except ImportError:  # Python < 3
@@ -18,7 +18,7 @@ class ModelQueryForm(Form):
     ModelQueryForm builds a django form that allows complex filtering against a model.
 
     :ivar Model model: Model to be filtered
-    :ivar list include: List of field names to be included in the standard orm naming
+    :ivar list include: Field names to be included using the standard orm naming
 
         .. note::
             To include fields in related models, the related field must be in the `traverse_fields` list
@@ -55,6 +55,13 @@ class ModelQueryForm(Form):
 
     def _build_form(self, model, field_prepend=None):
         """
+        Iterates through model fields to generate modelqueryform fields matching `self.include`
+        Recursively called to correctly build relationship spanning form fields
+
+        :param model: Current model to inspect. Alwasy starts with `self.model`
+        :type model: django.db.model
+        :param field_prepend: Relation field name if using `self.traverse`
+        :type field_prepend: str
         :raises TypeError: If a field in `self.traverse_fields` is not a relationship type
         """
         for model_field in model._meta.fields + model._meta.many_to_many:

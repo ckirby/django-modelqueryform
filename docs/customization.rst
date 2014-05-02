@@ -22,7 +22,7 @@ Each of these aspects can be customized either by Model Field or Model Field typ
    * `print_FIELD(field_name, values)`
    * `print_type_FIELDTYPE(field_name, values)`
    
-.. note::
+.. Warning::
    For fields that have no default you must implement a field builder and a filter builder
    
 For these examples we will use the following Model::
@@ -63,7 +63,6 @@ By Type::
 .. note:: No NotImplementedError because this covers the type for both first_name and last_name
    If there is a name based builder and a type based builder for a field the named builder takes precedence
    
-
 Filter Builder
 --------------
 
@@ -78,6 +77,19 @@ By Type::
 
    def filter_type_charfield(field_name, values):
       return Q(**{field_name + '__contains': values})
+      
+Pretty Print Builder
+--------------------
+
+By Name::
+
+   def print_first_name(field_name, values):
+      return "Matches %s" % values
+
+By Type::
+
+   def print_type_charfield(field_name, values):
+      return "Contains %s" % values 
    
 
 
