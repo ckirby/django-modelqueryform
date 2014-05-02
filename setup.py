@@ -21,13 +21,12 @@ if sys.argv[-1] == 'publish':
     sys.exit()
 
 readme = open('README.rst').read()
-history = open('HISTORY.rst').read().replace('.. :changelog:', '')
 
 setup(
     name='django-modelqueryform',
     version=version,
     description="""App for generating forms allowing users to build model queries""",
-    long_description=readme + '\n\n' + history,
+    long_description=readme,
     author='Chaim Kirby',
     author_email='chaim.kirby@gmail.com',
     url='https://github.com/ckirby/django-modelqueryform',
