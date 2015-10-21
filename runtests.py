@@ -1,8 +1,8 @@
 import sys
+import os
+from django.conf import settings
 
-try:
-    from django.conf import settings
-
+if not settings.configured and not os.environ.get('DJANGO_SETTINGS_MODULE'):
     settings.configure(
         DEBUG=True,
         USE_TZ=True,
@@ -24,9 +24,6 @@ try:
     )
 
     from django_nose import NoseTestSuiteRunner
-except ImportError:
-    raise ImportError("To fix this error, run: pip install -r requirements-test.txt")
-
 
 def run_tests(*test_args):
     if not test_args:
