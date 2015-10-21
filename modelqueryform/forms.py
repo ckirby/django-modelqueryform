@@ -198,13 +198,9 @@ class ModelQueryForm(Form):
         if data_set is None:
             data_set = self.model.objects.all()
 
-        if not data_set.exists():
-            raise ImproperlyConfigured("process requires a QuerySet to filter."
-                                       "Run as form.process(QuerySet)"
-            )
-
-        if not data_set[0]._meta.fields == self.model._meta.fields:
-            raise TypeError("Match the QuerySet to this form instances Model")
+        else:
+            if data_set.first() is not None and not data_set.first()._meta.fields == self.model._meta.fields:
+                raise TypeError("Match the QuerySet to this form instances Model")
 
         filters = self.get_filters()
 

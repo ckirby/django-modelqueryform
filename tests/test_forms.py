@@ -103,10 +103,7 @@ class TestModelqueryformForms(TestCase):
     def test_process_empty_dataset(self):
         form = FormTest({})
         form.is_valid()
-        self.assertRaises(ImproperlyConfigured,
-                          form.process,
-                          BaseModelForTest.objects.filter(integer=3)
-        )
+        self.assertEqual(len(form.process(BaseModelForTest.objects.filter(integer=3))), 0, 'Should be empty')
 
     def test_process_model_mismatch(self):
         form = FormTest({})
