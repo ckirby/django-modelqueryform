@@ -1,4 +1,5 @@
 from __future__ import unicode_literals
+
 from django.db import models
 from django.utils.encoding import python_2_unicode_compatible
 
@@ -17,6 +18,7 @@ class BaseModelForTest(models.Model):
 
     def __str__(self):
         return "%s" % self.pk
+
 
 @python_2_unicode_compatible
 class RelatedModelForTest(models.Model):

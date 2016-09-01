@@ -1,8 +1,9 @@
-from django.forms.widgets import MultiWidget, CheckboxInput, NumberInput
-from django.utils.safestring import mark_safe
-from django.forms.fields import Field
 from django.core.exceptions import ValidationError
 from django.db.models.aggregates import Min, Max
+from django.forms.fields import Field
+from django.forms.widgets import MultiWidget, CheckboxInput, NumberInput
+from django.utils.safestring import mark_safe
+
 from .utils import traverse_related_to_field
 
 

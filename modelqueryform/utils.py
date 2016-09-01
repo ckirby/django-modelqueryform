@@ -1,7 +1,9 @@
 import operator
+
 from django.db.models.query_utils import Q
 from django.forms.fields import MultipleChoiceField
 from django.forms.widgets import CheckboxSelectMultiple
+
 try:
     from functools import reduce
 except ImportError:  # Python < 3
@@ -15,11 +17,11 @@ def traverse_related_to_field(field_name, model):
     '''
     jumps = field_name.split("__")
     if len(jumps) is 1:
-        return model._meta.get_field_by_name(field_name)[0]
+        return model._meta.get_field(field_name)
     else:
         return traverse_related_to_field("__".join(jumps[1:]),
-                                        model._meta.get_field_by_name(jumps[:1][0])[0].rel.to
-        )
+                                         model._meta.get_field(jumps[:1][0]).rel.to
+                                         )
 
 
 def get_choices_from_distinct(model, field):
@@ -33,11 +35,11 @@ def get_choices_from_distinct(model, field):
     """
 
     choices = [[x, x]
-        for x in
-          model.objects.distinct()
-                       .order_by(field)
-                       .values_list(field, flat=True)
-    ]
+               for x in
+               model.objects.distinct()
+                   .order_by(field)
+                   .values_list(field, flat=True)
+               ]
 
     return choices
 
@@ -76,7 +78,7 @@ def get_multiplechoice_field(field, choices):
                                    required=False,
                                    widget=CheckboxSelectMultiple,
                                    choices=choices
-        )
+                                   )
     else:
         raise ValueError("%s does not have choices. "
                          "MultipleChoiceField is inappropriate" %
@@ -99,9 +101,9 @@ def get_range_field_filter(field, values):
         range_max = values['max']
         if not range_min == range_max:
             filters.append(reduce(operator.and_,
-                                    [Q(**{field + '__gte': range_min}),
-                                     Q(**{field + '__lte': range_max}),
-                                     ]
+                                  [Q(**{field + '__gte': range_min}),
+                                   Q(**{field + '__lte': range_max}),
+                                   ]
                                   )
                            )
         else:
@@ -127,10 +129,6 @@ def get_multiplechoice_field_filter(field, values):
     try:
         return reduce(operator.or_,
                       [Q(**{field: value}) for value in values]
-                )
+                      )
     except:
         return None
-
-
-
-

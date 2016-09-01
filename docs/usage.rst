@@ -70,10 +70,7 @@ If we want our users to be able to select for (non)-accredited institions we wou
        model = MyModel
        inclue = ['age','employed','degree', 'institution__accredited']
        traverse_fields = ['institution',]
-       
-.. note::
-   To follow a relationship with an `include` field, make sure to put the relationship field into traverse_fields
-   
+
 Alternatively we can use the relationship field as a `MultipleChoiceField`::
 
    class MyModelQueryForm(modelqueryform.ModelQueryForm):

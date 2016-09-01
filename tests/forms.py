@@ -1,7 +1,8 @@
-from .models import BaseModelForTest
-from modelqueryform.forms import ModelQueryForm
-from django.forms import CharField, Field, IntegerField
 from django.db.models.query_utils import Q
+from django.forms import CharField, Field, IntegerField
+
+from modelqueryform.forms import ModelQueryForm
+from .models import BaseModelForTest
 
 
 class NoModelForm(ModelQueryForm):
@@ -68,21 +69,10 @@ class GoodTraverseForm(ModelQueryForm):
                'related_type__related_type',
                'foreign_related__related_type',
                'many_related__related_type'
-    ]
-    traverse_fields = ['related_type', 'foreign_related', 'many_related']
+               ]
 
 
 class RelatedAsChoicesForm(ModelQueryForm):
     model = BaseModelForTest
     include = ['foreign_related']
 
-
-class BadTrasverseForm(ModelQueryForm):
-    model = BaseModelForTest
-    traverse_fields = ['text', ]
-
-
-class BadOverlapForm(ModelQueryForm):
-    model = BaseModelForTest
-    include = ['integer', 'float', 'related_type']
-    traverse_fields = ['related_type', 'foreign_related', 'many_related']

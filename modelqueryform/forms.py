@@ -1,12 +1,16 @@
+from __future__ import print_function
 import operator
 from collections import OrderedDict
-from django.forms import Form, MultipleChoiceField
-from django.core.exceptions import ImproperlyConfigured
+
+from django.core.exceptions import ImproperlyConfigured, FieldDoesNotExist
 from django.db.models.query_utils import Q
-from .widgets import RangeField
+from django.forms import Form, MultipleChoiceField
+
 from .utils import traverse_related_to_field, get_range_field, \
     get_range_field_filter, get_multiplechoice_field, \
     get_multiplechoice_field_filter
+from .widgets import RangeField
+
 try:
     from functools import reduce
 except ImportError:  # Python < 3
@@ -19,33 +23,18 @@ class ModelQueryForm(Form):
 
     :ivar Model model: Model to be filtered
     :ivar list include: Field names to be included using the standard orm naming
-
-        .. note::
-            To include fields in related models, the related field must be in the `traverse_fields` list
-
-    :ivar list traverse_fields: List of field names that should have their relationship followed.
-
-        .. note::
-            Only ForeignKey, ManytoManyField, and OneToOneField is appropriate for traverse_fields
-
     """
     model = None
     include = []
-    traverse_fields = []
 
     def __init__(self, *args, **kwargs):
         """
         :raises ImproperlyConfigured: If `model` is missing
-        :raises ImproperlyConfigured: If `include` and `traverse_fields` overlap
         """
         super(ModelQueryForm, self).__init__(*args, **kwargs)
         if not self.model:
             raise ImproperlyConfigured("ModelQueryForm needs a model defined as a class attribute")
 
-        overlap_fields = set(self.include).intersection(self.traverse_fields)
-        if overlap_fields:
-            raise ImproperlyConfigured("include and traverse_fields have %s overlapping fields: %s"
-                                       % (len(overlap_fields), ",".join(overlap_fields)))
         self._build_form(self.model)
 
     def clean(self):
@@ -62,22 +51,16 @@ class ModelQueryForm(Form):
         :type model: django.db.model
         :param field_prepend: Relation field name if using `self.traverse`
         :type field_prepend: str
-        :raises TypeError: If a field in `self.traverse_fields` is not a relationship type
         """
-        for model_field in model._meta.fields + model._meta.many_to_many:
-            orm_name = model_field.name
-            if field_prepend:
-                orm_name = "%s__%s" % (field_prepend, orm_name)
-            if orm_name in self.include:
-                self.fields[orm_name] = self._build_form_field(model_field, orm_name)
-            if orm_name in self.traverse_fields:
-                if model_field.get_internal_type() in self.rel_fields():
-                    self._build_form(model_field.rel.to, orm_name)
+        for field in self.include:
+            try:
+                if "__" in field:
+                    model_field = traverse_related_to_field(field, model)
                 else:
-                    raise TypeError("%s cannot be used for traversal."
-                                    "Traversal fields must be one of type ForeignKey, OneToOneField, ManyToManyField"
-                                    % orm_name
-                    )
+                    model_field = model._meta.get_field(field)
+                self.fields[field] = self._build_form_field(model_field, field)
+            except FieldDoesNotExist:
+                pass
 
     def _build_form_field(self, model_field, name):
         """ Build a form field for a given model field
@@ -122,14 +105,14 @@ class ModelQueryForm(Form):
             return get_multiplechoice_field(model_field, choices)
 
         raise NotImplementedError(
-                    "Field %s doesn't have default field.choices and "
-                    "ModelQueryForm doesn't have a default field builder for type %s."
-                    "Please define either a method build_type_%s(self, field) for fields of this type or"
-                    "build_%s(self, field) for this field specifically"
-                    % (model_field.name.lower(),
-                       model_field.get_internal_type().lower(),
-                       model_field.get_internal_type().lower(),
-                       model_field.name.lower())
+            "Field %s doesn't have default field.choices and "
+            "ModelQueryForm doesn't have a default field builder for type %s."
+            "Please define either a method build_type_%s(self, field) for fields of this type or"
+            "build_%s(self, field) for this field specifically"
+            % (model_field.name.lower(),
+               model_field.get_internal_type().lower(),
+               model_field.get_internal_type().lower(),
+               model_field.name.lower())
         )
 
     def numeric_fields(self):
@@ -144,7 +127,7 @@ class ModelQueryForm(Form):
                 'PositiveIntegerField',
                 'PositiveSmallIntegerField',
                 'SmallIntegerField',
-        ]
+                ]
 
     def choice_fields(self):
         """Get a list of model fields backed by choice values (Boolean types)
@@ -153,7 +136,7 @@ class ModelQueryForm(Form):
         """
         return ['BooleanField',
                 'NullBooleanField',
-        ]
+                ]
 
     def rel_fields(self):
         """Get a list of related model fields
@@ -163,7 +146,7 @@ class ModelQueryForm(Form):
         return ['ForeignKey',
                 'ManyToManyField',
                 'OneToOneField',
-        ]
+                ]
 
     def get_related_choices(self, model_field):
         """Make choices from a related
@@ -180,7 +163,7 @@ class ModelQueryForm(Form):
             raise TypeError("%s cannot be used for traversal."
                             "Traversal fields must be one of type ForeignKey, OneToOneField, ManyToManyField"
                             % model_field
-             )
+                            )
         return choices
 
     def process(self, data_set=None):
@@ -206,7 +189,7 @@ class ModelQueryForm(Form):
 
         if filters.values():
             query = self._test_filter_func_is_Q(
-                        self.build_query_from_filters(filters)
+                self.build_query_from_filters(filters)
             )
             return data_set.filter(query)
         else:
@@ -236,14 +219,14 @@ class ModelQueryForm(Form):
                 if hasattr(self, "filter_%s" % field.name.lower()):
                     filters[field] = self._test_filter_func_is_Q(
                         getattr(self, "filter_%s" %
-                            field.name.lower()
-                        )(field_name, values)
+                                field.name.lower()
+                                )(field_name, values)
                     )
                 elif hasattr(self, "filter_type_%s" % field.get_internal_type().lower()):
                     filters[field] = self._test_filter_func_is_Q(
                         getattr(self, "filter_type_%s" %
-                            field.get_internal_type().lower()
-                        )(field_name, values)
+                                field.get_internal_type().lower()
+                                )(field_name, values)
                     )
                 elif type(self.fields[field_name]) is RangeField:
                     filters[field] = self._test_filter_func_is_Q(
@@ -277,7 +260,7 @@ class ModelQueryForm(Form):
         else:
             raise TypeError("Filter methods must return a Q object."
                             "If you have a list use reduce with operator.or_ or operator.and_"
-            )
+                            )
 
     def build_query_from_filters(self, filters):
         """Generate a Q object that is a logical AND of a list of Q objects
@@ -337,7 +320,7 @@ class ModelQueryForm(Form):
         :returns str: Comma delimited get_display_FIELD() for selected choices
         """
         choices = dict((str(k), v)
-                    for k, v in dict(form_field.choices).items())
+                       for k, v in dict(form_field.choices).items())
 
         return ",".join([choices[key] for key in cleaned_field_data])
 
@@ -355,14 +338,14 @@ class ModelQueryForm(Form):
                 field = traverse_related_to_field(field_name, self.model)
                 if hasattr(self, "print_%s" % field.name.lower()):
                     vals[self.fields[field_name].label] = \
-                    getattr(self, "print_%s" %
-                            field.name.lower()
-                    )(field, values)
+                        getattr(self, "print_%s" %
+                                field.name.lower()
+                                )(field, values)
                 elif hasattr(self, "print_type_%s" % field.get_internal_type().lower()):
-                        vals[self.fields[field_name].label] = \
+                    vals[self.fields[field_name].label] = \
                         getattr(self, "print_type_%s" %
-                            field.get_internal_type().lower()
-                        )(field_name, values)
+                                field.get_internal_type().lower()
+                                )(field_name, values)
                 elif type(self.fields[field_name]) is RangeField:
                     vals[self.fields[field_name].label] = \
                         self.get_range_field_print(self.fields[field_name],
