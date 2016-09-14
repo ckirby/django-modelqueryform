@@ -21,6 +21,14 @@ class BaseModelForTest(models.Model):
 
 
 @python_2_unicode_compatible
+class InheritBaseModelForTest(BaseModelForTest):
+    character = models.CharField(max_length=1)
+
+    def __str__(self):
+        return self.character
+
+
+@python_2_unicode_compatible
 class RelatedModelForTest(models.Model):
     related_type = models.IntegerField()
 

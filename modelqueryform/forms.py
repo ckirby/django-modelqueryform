@@ -176,13 +176,13 @@ class ModelQueryForm(Form):
 
         :returns QuerySet: data_set.filter(Q object)
         :raises ImproperlyConfigured: No `data_set` to filter
-        :raises TypeError: `data_set` is a different Model class than `self.model`
+        :raises TypeError: `data_set` is not an instance (using `isinstance()`) of `self.model`
         """
         if data_set is None:
             data_set = self.model.objects.all()
 
         else:
-            if data_set.first() is not None and not data_set.first()._meta.fields == self.model._meta.fields:
+            if data_set.first() is not None and not isinstance(data_set.first(), self.model):
                 raise TypeError("Match the QuerySet to this form instances Model")
 
         filters = self.get_filters()

@@ -22,7 +22,7 @@ from tests.forms import FormTest, FormTestWithText, FormTestWithTextNamedMethod,
     GoodTraverseForm, RelatedAsChoicesForm, \
     FormTestWithTextNamedMethodAndProcessor, \
     FormTestWithTextTypeMethodAndProcessor
-from tests.models import RelatedModelForTest
+from tests.models import RelatedModelForTest, InheritBaseModelForTest
 from .models import BaseModelForTest
 
 try:
@@ -69,6 +69,13 @@ class TestModelqueryformForms(TestCase):
                                         boolean=True,
                                         null_boolean=None,
                                         text="qux")
+        InheritBaseModelForTest.objects.create(integer=19,
+                                        integer_with_choices=2,
+                                        float=16,
+                                        boolean=True,
+                                        null_boolean=None,
+                                        text="qux",
+                                        character='a')
 
         self.base_form = FormTest()
 
@@ -114,6 +121,14 @@ class TestModelqueryformForms(TestCase):
                           form.process,
                           RelatedModelForTest.objects.all()
                           )
+
+    def test_process_model_instance(self):
+        form = FormTest({})
+        form.is_valid()
+        try:
+            form.process(InheritBaseModelForTest.objects.all())
+        except TypeError:
+            self.fail("process() raised TypeError unexpectedly")
 
     def test_process_not_implemented(self):
         form = FormTestWithTextTypeMethod({'text': 'Test Text'})
