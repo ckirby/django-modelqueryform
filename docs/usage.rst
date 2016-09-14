@@ -45,7 +45,7 @@ Once the form is POSTed to the view it is used to filter your model::
 `process([data_set=None])` generates a Q object which is a logical AND of the Q objects generated for each widget. 
 It uses the resulting Q object to filter the associated model class.
 
-.. note:: `process()` optionally accepts a QuerySet of the model class used for the form
+.. note:: `process()` optionally accepts a QuerySet of a model class 'x' where isinstance(x, 'form model class') is True
    If no QuerySet is passed, the Q object will run against model.objects.all()
    
 Using `pretty_print_query()` you get a dict() of the form {str(field.label): str(field values)} to parse into a template::
