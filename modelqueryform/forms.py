@@ -324,15 +324,27 @@ class ModelQueryForm(Form):
 
         return ",".join([choices[key] for key in cleaned_field_data])
 
-    def pretty_print_query(self):
+    def pretty_print_query(self, fields_to_print = None):
         """
         Get an OrderedDict to facilitate printing of generated filter
 
+        :param fields_to_print: List of names in changed_data
+        :type fields_to_print: list
+
+        .. note:: If fields_to_print == None, self.changed_data is used
+
         :returns dict: {form field name: string representation of filter,...}
         :raises NotImplementedError: For fields that do not have a default print builder and no custom print builder can be found
+        :raises ValueError: if any name in the field_to_print is not in self.changed_data
         """
         vals = OrderedDict()
-        for field_name in self.changed_data:
+        if fields_to_print is None:
+            fields_to_print = self.changed_data
+        else:
+            if not set(fields_to_print).issubset(set(self.changed_data)):
+                raise ValueError('field names in fields_to_print must be in self.changed_data')
+
+        for field_name in fields_to_print:
             values = self.cleaned_data[field_name]
             if values:
                 field = traverse_related_to_field(field_name, self.model)

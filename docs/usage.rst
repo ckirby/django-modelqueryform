@@ -52,7 +52,9 @@ Using `pretty_print_query()` you get a dict() of the form {str(field.label): str
 
    query_form = MyModelQueryForm(request.POST)
    query_parameters = query_form.pretty_print_query()
-     
+
+`pretty_print_query()` also accepts an argument `fields_to_print`, a list of names that must be a subset of `self.changed_data`.
+
 Working with Relations
 ----------------------
 

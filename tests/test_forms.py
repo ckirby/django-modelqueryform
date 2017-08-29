@@ -9,7 +9,6 @@ Tests for `django-modelqueryform` forms module.
 """
 
 from collections import OrderedDict
-
 from django.core.exceptions import ImproperlyConfigured
 from django.db.models.query_utils import Q
 from django.forms.fields import MultipleChoiceField, Field, IntegerField
@@ -70,12 +69,12 @@ class TestModelqueryformForms(TestCase):
                                         null_boolean=None,
                                         text="qux")
         InheritBaseModelForTest.objects.create(integer=19,
-                                        integer_with_choices=2,
-                                        float=16,
-                                        boolean=True,
-                                        null_boolean=None,
-                                        text="qux",
-                                        character='a')
+                                               integer_with_choices=2,
+                                               float=16,
+                                               boolean=True,
+                                               null_boolean=None,
+                                               text="qux",
+                                               character='a')
 
         self.base_form = FormTest()
 
@@ -370,6 +369,18 @@ class TestModelqueryformForms(TestCase):
         self.assertEqual(list(form.pretty_print_query().keys()).sort(),
                          (['text'].sort()),
                          "Should have a named print method")
+
+    def test_pretty_print_subset(self):
+        form = FormTest({'integer_with_choices': [1, 3],
+                         'boolean': [True, False],
+                         'integer_0': 12, 'integer_1': 19, "integer_2": True})
+        form.is_valid()
+        pretty_print = form.pretty_print_query(fields_to_print=['boolean', 'integer'])
+        self.assertEqual(list(pretty_print.keys()).sort(),
+                         (['integer', 'boolean']).sort(),
+                         "Should have .keys() that match the form field names")
+
+        self.assertRaises(ValueError, form.pretty_print_query, fields_to_print=['text'])
 
     def test_related_as_choices(self):
         form = RelatedAsChoicesForm({})
