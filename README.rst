@@ -28,8 +28,8 @@ The full documentation is at https://django-modelqueryform.readthedocs.org.
 Requirements
 ------------
 
-* Django 1.8+
-* Python 2.7, 3.3  
+* Django 1.11+
+* Python 3.4+
 
    
 Features

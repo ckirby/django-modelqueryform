@@ -20,7 +20,7 @@ def traverse_related_to_field(field_name, model):
         return model._meta.get_field(field_name)
     else:
         return traverse_related_to_field("__".join(jumps[1:]),
-                                         model._meta.get_field(jumps[:1][0]).rel.to
+                                         model._meta.get_field(jumps[:1][0]).related_model
                                          )
 
 

@@ -1,6 +1,8 @@
-from __future__ import print_function
+
+import hashlib
 import operator
 from collections import OrderedDict
+from functools import reduce
 
 from django.core.exceptions import ImproperlyConfigured, FieldDoesNotExist
 from django.db.models.query_utils import Q
@@ -10,11 +12,6 @@ from .utils import traverse_related_to_field, get_range_field, \
     get_range_field_filter, get_multiplechoice_field, \
     get_multiplechoice_field_filter
 from .widgets import RangeField
-
-try:
-    from functools import reduce
-except ImportError:  # Python < 3
-    pass
 
 
 class ModelQueryForm(Form):
@@ -158,7 +155,7 @@ class ModelQueryForm(Form):
 
         """
         if model_field.get_internal_type() in self.rel_fields():
-            choices = [[fkf.pk, fkf] for fkf in model_field.rel.to.objects.all()]
+            choices = [[fkf.pk, fkf] for fkf in model_field.related_model.objects.all()]
         else:
             raise TypeError("%s cannot be used for traversal."
                             "Traversal fields must be one of type ForeignKey, OneToOneField, ManyToManyField"
@@ -185,15 +182,20 @@ class ModelQueryForm(Form):
             if data_set.first() is not None and not isinstance(data_set.first(), self.model):
                 raise TypeError("Match the QuerySet to this form instances Model")
 
-        filters = self.get_filters()
-
-        if filters.values():
-            query = self._test_filter_func_is_Q(
-                self.build_query_from_filters(filters)
-            )
+        query = self._get_query()
+        if query is not None:
             return data_set.filter(query)
         else:
             return data_set
+
+    def _get_query(self):
+        filters = self.get_filters()
+
+        if filters.values():
+            return self._test_filter_func_is_Q(
+                self.build_query_from_filters(filters)
+            )
+        return None
 
     def get_filters(self):
         """ Get a dict of the POSTed form values as Q objects
@@ -344,7 +346,7 @@ class ModelQueryForm(Form):
             if not set(fields_to_print).issubset(set(self.changed_data)):
                 raise ValueError('field names in fields_to_print must be in self.changed_data')
 
-        for field_name in fields_to_print:
+        for field_name in sorted(fields_to_print):
             values = self.cleaned_data[field_name]
             if values:
                 field = traverse_related_to_field(field_name, self.model)
@@ -376,3 +378,14 @@ class ModelQueryForm(Form):
                            field.name.lower())
                     )
         return vals
+
+    def query_hash(self):
+        """
+        Get an md5 hexdigest of the pretty_print_query().
+
+        .. note:: Useful for caching results of a given query
+
+        :returns str: 32 char md5.hexdigest()
+        """
+        return hashlib.md5(str(self.pretty_print_query()).encode('utf-8')).hexdigest()
+
