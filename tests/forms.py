@@ -75,4 +75,3 @@ class GoodTraverseForm(ModelQueryForm):
 class RelatedAsChoicesForm(ModelQueryForm):
     model = BaseModelForTest
     include = ['foreign_related']
-

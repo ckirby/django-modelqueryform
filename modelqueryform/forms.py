@@ -81,7 +81,8 @@ class ModelQueryForm(Form):
             for ModelFields that do not use a `RangeField` or `MultipleChoiceField`
 
         :returns: FormField
-        :raises NotImplementedError: For fields that do not have a default `ModelQueryForm` field builder and no custom field builder can be found
+        :raises NotImplementedError: For fields that do not have a default `ModelQueryForm` field builder and no custom
+        field builder can be found
         """
         if hasattr(self, "build_%s" % name.lower()):
             return getattr(self, "build_%s" % name.lower())(model_field)
@@ -202,7 +203,8 @@ class ModelQueryForm(Form):
         Form fields will be evaluated in the following order to generate a Q object:
 
         #. `filter_FIELD(field_name, values)` (FIELD is the ModelField name)
-        #. `filter_type_FIELD(field_name, values)` (FIELD is the ModelField type .lower() eg. 'integerfield', charfield', etc.)
+        #. `filter_type_FIELD(field_name, values)` (FIELD is the ModelField type .lower()
+        eg. 'integerfield', charfield', etc.)
         #. :func:`modelqueryform.utils.get_range_field_filter` if the FormField is a RangeField
         #. :func:`modelqueryform.utils.get_multiplechoice_field_filter` if the FormField is a MultipleChoiceField
 
@@ -211,7 +213,8 @@ class ModelQueryForm(Form):
             for ModelFields that do not use a `RangeField` or `MultipleChoiceField`
 
         :returns Dict: {Form field name: Q object,...}
-        :raises NotImplementedError: For fields that do not have a default `ModelQueryForm` filter builder and no custom filter builder can be found
+        :raises NotImplementedError: For fields that do not have a default `ModelQueryForm` filter builder and no
+        custom filter builder can be found
         """
         filters = {}
         for field_name in self.changed_data:
@@ -326,7 +329,7 @@ class ModelQueryForm(Form):
 
         return ",".join([choices[key] for key in cleaned_field_data])
 
-    def pretty_print_query(self, fields_to_print = None):
+    def pretty_print_query(self, fields_to_print=None):
         """
         Get an OrderedDict to facilitate printing of generated filter
 
@@ -336,7 +339,8 @@ class ModelQueryForm(Form):
         .. note:: If fields_to_print == None, self.changed_data is used
 
         :returns dict: {form field name: string representation of filter,...}
-        :raises NotImplementedError: For fields that do not have a default print builder and no custom print builder can be found
+        :raises NotImplementedError: For fields that do not have a default print builder and no custom print builder
+        can be found
         :raises ValueError: if any name in the field_to_print is not in self.changed_data
         """
         vals = OrderedDict()
@@ -388,4 +392,3 @@ class ModelQueryForm(Form):
         :returns str: 32 char md5.hexdigest()
         """
         return hashlib.md5(str(self.pretty_print_query()).encode('utf-8')).hexdigest()
-
