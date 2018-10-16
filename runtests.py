@@ -17,7 +17,7 @@ if not settings.configured and not os.environ.get('DJANGO_SETTINGS_MODULE'):
             "django.contrib.contenttypes",
             "django.contrib.sites",
             "modelqueryform",
-	    "tests",
+            "tests",
         ],
         SITE_ID=1,
         NOSE_ARGS=['-s'],
