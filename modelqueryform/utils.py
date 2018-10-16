@@ -34,12 +34,7 @@ def get_choices_from_distinct(model, field):
     :returns: list -- the distinct values of the field in the model
     """
 
-    choices = [[x, x]
-               for x in
-               model.objects.distinct()
-                   .order_by(field)
-                   .values_list(field, flat=True)
-               ]
+    choices = [[x, x] for x in model.objects.distinct().order_by(field).values_list(field, flat=True)]
 
     return choices
 
