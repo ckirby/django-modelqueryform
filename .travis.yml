@@ -1,14 +1,18 @@
-# Config file for automatic testing at travis-ci.org
+# -- FILE: .travis.yml
 language: python
 python:
-  - "3.4"
-  - "3.5"
-  - "3.6"
-# command to install dependencies, e.g. pip install -r requirements.txt --use-mirrors
-install: pip install tox
+  - 3.4
+  - 3.5
+  - 3.6
+env:
+  - DJANGO=1.11
+  - DJANGO=2.0
+  - DJANGO=2.1
 
-# command to run tests using coverage, e.g. python setup.py test
-script: tox
-
-# report coverage to coveralls.io
-after_success: coveralls
+install:
+  - pip install tox-travis
+script:
+  - tox
+after_success:
+  - pip install coveralls
+  - coveralls
