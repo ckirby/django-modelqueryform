@@ -25,6 +25,7 @@ if not settings.configured and not os.environ.get('DJANGO_SETTINGS_MODULE'):
 
     from django_nose import NoseTestSuiteRunner
 
+
 def run_tests(*test_args):
     if not test_args:
         test_args = ['tests']
